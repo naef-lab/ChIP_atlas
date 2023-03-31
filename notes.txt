@@ -1,0 +1,26 @@
+1. download chip data:
+    download_chip_data.sh
+
+2. check if openable and dowload missing:
+    check_tracks.py
+    redownload_error_chip_data.sh
+
+3. Merge peaks from same tf and compute jaccard as tf pair similarity:
+    merge_tf_bigbeds.sh
+    jaccard_index_tf_peaks.sh
+
+4. download complex from complex portal save as interaction matrix
+    download_complex_data.sh
+    get_complex_proteins.py
+
+5. Plot complex matrix and jaccard index
+    plot_tf_complex_vs_peaks_jaccard.py
+
+6. Clustering TFs based on Jaccard (ongoing)
+    clustering_tf_on_jaccard.py
+
+7. Get one one track per tf, intersect with ATAC-seq and promoter.
+    combine_peaks_intersect_with_tracks.py
+
+
+
