@@ -98,23 +98,5 @@ plt.tight_layout()
 fig.savefig('results/fig/histogram_jaccard_in_out_complex.pdf')
 plt.close(fig)
 
-# rearange
-graph = csr_matrix(tf_jaccard>.25)
-idx = reverse_cuthill_mckee(graph)
-tf_jaccard = tf_jaccard.iloc[idx,idx]
 
-# plot whole Jaccard index matrix
-fig = plt.figure()
-ax = fig.add_subplot(111)
-pos = ax.imshow(tf_jaccard, cmap='afmhot_r', interpolation=None)
 
-fig.colorbar(pos, ax=ax, shrink=0.5,location='top')
-ax.set_xticks(range(tf_jaccard.shape[0]))
-ax.set_xticklabels(tf_jaccard.columns,fontsize=6,rotation=90)
-ax.set_yticks(range(tf_jaccard.shape[1]))
-ax.set_yticklabels(tf_jaccard.index,fontsize=6)
-
-fig.set_size_inches([24,24])
-plt.tight_layout()
-fig.savefig('results/fig/jaccard_index_tf_peaks.pdf')
-plt.close(fig)

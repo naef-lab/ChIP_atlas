@@ -5,7 +5,7 @@ mapfile -t TF < <(find results/bedfiles/*_prom.bed | cut -f1 -d'.' | cut -f3 -d'
 N=${#TF[@]}
 
 # prepare output table
-outfile='results/Jaccard_peak_pairs_length_prom.txt'
+outfile='results/Jaccard_peak_pairs_n_prom.txt'
 if [ -e $outfile ]
 then
     rm $outfile
