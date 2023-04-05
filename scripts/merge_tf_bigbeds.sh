@@ -7,7 +7,7 @@ do
     echo "$tf"
 
     # define output and tmp bedfile for tf and empty if exists
-    fout=results/bedfiles/${tf}.bed
+    fout=results/TF_bedfiles/${tf}.bed
     if [ -e "$fout" ]
     then
         rm "$fout"

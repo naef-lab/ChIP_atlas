@@ -6,7 +6,10 @@ import matplotlib.pyplot as plt
 
 # input/output files
 infile_complex = 'results/TF_Complex.tsv'
-infile_tf_peaks_jaccard = 'results/Jaccard_peak_pairs.txt'
+# taking all peaks
+infile_tf_peaks_jaccard = 'results/Jaccard_peak_pairs.txt' 
+# taking only promoter peaks
+infile_tf_peaks_jaccard = 'results/Jaccard_peak_pairs_length_prom.txt'
 
 # get Complex Portal interaction matrix
 tf_complex = pd.read_csv(infile_complex,sep='\t',index_col=0)
@@ -14,6 +17,8 @@ tf_complex = pd.read_csv(infile_complex,sep='\t',index_col=0)
 # get TF peaks pairs jaccard indices
 tf_jaccard = pd.read_csv(infile_tf_peaks_jaccard,sep='\t',index_col=0)
 tf_jaccard.loc[:,:] = tf_jaccard.values + tf_jaccard.values.T
+tf_jaccard.columns = [n.replace('_prom','') for n in tf_jaccard.columns]
+tf_jaccard.index = [n.replace('_prom','') for n in tf_jaccard.index]
 
 # remove 0 summing columns
 tf_complex = tf_complex.loc[tf_complex.sum()>0,tf_complex.sum()>0]
@@ -59,7 +64,7 @@ ax.axis('off')
 ax = fig.add_subplot(122)
 pos = ax.imshow(tf_jaccard.loc[tf_complex.index,tf_complex.columns], cmap='jet', interpolation=None)
 
-fig.colorbar(pos, ax=ax, shrink=0.5,location='top')
+#fig.colorbar(pos, ax=ax, shrink=0.5,location='top')
 ax.set_xticks(range(tf_complex.shape[0]))
 ax.set_xticklabels(tf_complex.columns,fontsize=6,rotation=90)
 ax.set_yticks(range(tf_complex.shape[1]))

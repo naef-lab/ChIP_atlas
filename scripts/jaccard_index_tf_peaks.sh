@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Get TF list and count
-mapfile -t TF < <(find results/bedfiles/*_prom.bed | cut -f1 -d'.' | cut -f3 -d'/')
+mapfile -t TF < <(find results/TF_prom_bedfiles/*.bed | cut -f3 -d'/' | cut -f1 -d'.')
 N=${#TF[@]}
 
 # prepare output table
-outfile='results/Jaccard_peak_pairs_length_prom.txt'
+outfile='results/Jaccard_peak_prom.txt'
 if [ -e $outfile ]
 then
     rm $outfile
@@ -29,7 +29,7 @@ do
     do
         if [[ $j > $i ]]
         then 
-            printf "\t%f" "$(bedtools jaccard -a results/bedfiles/"${TF[$i-1]}".bed -b results/bedfiles/"${TF[$j-1]}".bed | tail -1 | cut -f3)"  >> $outfile
+            printf "\t%f" "$(bedtools jaccard -a results/TF_prom_bedfiles/"${TF[$i-1]}".bed -b results/TF_prom_bedfiles/"${TF[$j-1]}".bed | tail -1 | cut -f3)"  >> $outfile
         else
             printf "\t0" >> $outfile
         fi

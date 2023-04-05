@@ -8,25 +8,28 @@ import matplotlib.pyplot as plt
 
 # input/output files
 infile_tf_peaks_jaccard = 'results/Jaccard_peak_pairs.txt'
+infile_tf_peaks_jaccard = 'results/Jaccard_peak_prom.txt'
+
 
 # get TF peaks pairs jaccard indices
 tf_jaccard = pd.read_csv(infile_tf_peaks_jaccard,sep='\t',index_col=0)
 tf_jaccard.loc[:,:] = tf_jaccard.values + tf_jaccard.values.T
+tf_jaccard.columns = [n.replace('_prom','') for n in tf_jaccard.columns]
+tf_jaccard.index = [n.replace('_prom','') for n in tf_jaccard.index]
 
 N_tf = tf_jaccard.shape[0]
-
 
 # get block matrix
 
 # rearange
-graph = csr_matrix(tf_jaccard>.3)
+graph = csr_matrix(tf_jaccard>.2)
 idx = reverse_cuthill_mckee(graph)
 tf_jaccard = tf_jaccard.iloc[idx,idx]
 
 # plot whole Jaccard index matrix
 fig = plt.figure()
 ax = fig.add_subplot(111)
-pos = ax.imshow(tf_jaccard, cmap='twilight', interpolation=None)
+pos = ax.imshow(tf_jaccard, cmap='gnuplot_r', interpolation=None)
 
 fig.colorbar(pos, ax=ax, shrink=0.5,location='top')
 ax.set_xticks(range(tf_jaccard.shape[0]))
