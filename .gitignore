@@ -3,4 +3,4 @@ resources/tracks
 resources/mm10_promoters_v2.gff.gz
 resources/mm10_TSC_v2.gff.gz
 tmp
-results/bedfiles
+results
