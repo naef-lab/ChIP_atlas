@@ -1,0 +1,21 @@
+import pandas as pd
+
+configfile: 'config/chip_seq.yaml'
+
+rule all:
+    input:
+        expand('results/TF_tensors/{tf}.hdf5',tf=config['TF_EXPERIMENT'])
+
+
+rule make_tensors:
+    input:
+        lambda wildcards: expand('resources/tracks/{exp}.bw', exp=config['TF_EXPERIMENT'][wildcards.tf])
+    output:
+        'results/TF_tensors/{tf}.hdf5'
+    params:
+        promoter=config['promoter'],
+        bin_size=config['bin_size']
+    shell:
+        """
+        python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --infile_promoters {params.promoter} --bin_size {params.bin_size} --outfile {output} --infiles_tf {input}
+        """
