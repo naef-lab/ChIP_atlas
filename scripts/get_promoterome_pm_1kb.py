@@ -1,7 +1,7 @@
 import pandas as pd
 
-infile='resources/mm10_promoters_v2.gff'
-outfile='resources/mm10_promoters_v2_pm1kb.gff'
+infile='/bigdata/jbreda/genome/mm10/mm10_promoters_v2.gff'
+outfile='/bigdata/jbreda/genome/mm10/mm10_promoters_v2_pm1kb.gff'
 
 win = 1000
 prom = pd.read_csv('resources/mm10_promoters_v2.gff',sep='\t',header=None,comment='#')

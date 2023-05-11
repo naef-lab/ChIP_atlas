@@ -1,5 +1,31 @@
-promoter: 'resources/mm10_promoters_v2_pm1kb.gff'
+Genome:
+  - mm10
+  #- mm39 no ChIP experiment on mm39
+  - hg19
+  - hg38
+
+Ensembl:
+    GeneID_GeneName_Synonyms:
+        mm10: mm10_ENSID_Genename_synonyms.txt.gz
+        mm39: mm39_ENSID_Genename_synonyms.txt.gz
+        hg19: hg19_ENSID_Genename_synonyms.txt.gz
+        hg38: hg38_ENSID_Genename_synonyms.txt.gz
+    GeneID_GeneName_Synonyms_dict:
+        mm10: mm10_ENSID_Genename_synonyms.txt
+        mm39: mm39_ENSID_Genename_synonyms.txt
+        hg19: hg19_ENSID_Genename_synonyms.txt
+        hg38: hg38_ENSID_Genename_synonyms.txt
+
+Promoterome:
+  mm10: /bigdata/jbreda/genome/mm10/mm10_promoters_v2.gff.gz
+  mm39: /bigdata/jbreda/genome/mm39/mm39_promoters_v1.gff.gz
+  hg19: /bigdata/jbreda/genome/hg19/hg19_promoters_v2.gff.gz
+  hg38: /bigdata/jbreda/genome/hg38/hg38_promoters_v1.gff.gz
+
+Window_kb: 2 
+
 bin_size: 20
+
 TF_EXPERIMENT:
     AML1-ETO:
         - SRX3491900

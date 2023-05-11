@@ -1,21 +1,51 @@
-import pandas as pd
-
 configfile: 'config/chip_seq.yaml'
 
 rule all:
     input:
-        expand('results/TF_tensors/{tf}.hdf5',tf=config['TF_EXPERIMENT'])
+        expand("resources/experimentList_{genome}_TFs_only.tab", genome=config['Genome'])
+        #expand('results/TF_tensors/{tf}.hdf5',tf=config['TF_EXPERIMENT'])
 
+rule GeneID_GeneName_Synonym_dict:
+    input:
+        "/bigdata/jbreda/genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
+    output:
+        "/bigdata/jbreda/genome/{genome}/{genome}_GeneID_GeneName_Synonyms_dict.txt",
+    shell:
+        "python scripts/get_GeneID_GeneName_Synonym_dict.py --infile {input} --outfile {output}"
 
-rule make_tensors:
+rule get_mm10_TF_list:
+    input:
+        TFs="/bigdata/jbreda/genome/mm10_TF_ID_list.csv",
+        gene_dict="/bigdata/jbreda/genome/mm10/mm10_GeneID_GeneName_Synonyms_dict.txt"
+    output:
+        "/bigdata/jbreda/genome/mm10_TF_list.csv"
+    shell:
+        """
+        python scripts/get_mm_TF_list.py --infile_tf {input.TFs} --infile_gene_dict {input.gene_dict} --outfile {output}
+        cp {output} /bigdata/jbreda/genome/mm39_TF_list.csv
+        """
+
+rule get_TF_in_ChIP:
+    input:
+        chip="resources/experimentList.tab",
+        tfs="/bigdata/jbreda/genome/{genome}_TF_list.csv",
+        gene_dict="/bigdata/jbreda/genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
+    output:
+        'resources/experimentList_{genome}_TFs_only.tab'
+    shell:
+        "python scripts/get_experimentList_TF.py --infile_chip {input.chip} --infile_tfs {input.tfs} --infile_gene_dict {input.gene_dict} --outfile {output} --genome {wildcards.genome}"
+
+rule make_tf_tensors:
     input:
         lambda wildcards: expand('resources/tracks/{exp}.bw', exp=config['TF_EXPERIMENT'][wildcards.tf])
     output:
         'results/TF_tensors/{tf}.hdf5'
     params:
-        promoter=config['promoter'],
+        promoter='~/Datastructure/results/{wildcards.genome}/promoterome_{config[Window_kb]}kb.gff',
         bin_size=config['bin_size']
     shell:
         """
         python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --infile_promoters {params.promoter} --bin_size {params.bin_size} --outfile {output} --infiles_tf {input}
         """
+#rule svd:
+#rule multivariate_gaussian:
