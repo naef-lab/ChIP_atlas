@@ -1,9 +1,45 @@
+import pandas as pd
+
 configfile: 'config/chip_seq.yaml'
+
+#TF_EXPERIMENT = {}
+#for genome in config['Genome']:
+    #print(genome)
+    # input/output
+    #infile=f'resources/experimentList_{genome}_TFs_only.tab'
+    # get tf:experiment dictionary
+    #experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3],index_col=0)
+    #experiment_tf.index = [f'resources/tracks/{genome}/{x}.bw' for x in experiment_tf.index]
+#    TF_EXPERIMENT[genome] = experiment_tf.groupby('Antigen').groups
+#    for tf in TF_EXPERIMENT[genome]:
+        #TF_EXPERIMENT[genome][tf] = list(TF_EXPERIMENT[genome][tf])
+
+def get_experiments(wildcards):
+    #infile = checkpoints.get_ChIP_experiments_TF_QC_filtered.get(**wildcards).output[0]
+    infile=f"resources/experimentList_{wildcards.genome}_TFs_only_QC_filtered.tab"
+    experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
+    experiment_tf.columns = ['id','antigen']
+    IDs = list(experiment_tf.loc[experiment_tf.antigen==wildcards.tf,'id'])
+    files = [f"resources/tracks/{wildcards.genome}/{id}.bw" for id in IDs]
+
+    return files
+
+def get_tfs(genome):
+    # input/output
+    infile=f"resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    #infile = checkpoints.get_ChIP_experiments_TF_QC_filtered.get(**wildcards).output[0]
+    experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
+    experiment_tf.columns = ['id','antigen']
+    
+    return list(experiment_tf.antigen.unique())
 
 rule all:
     input:
-        expand("resources/experimentList_{genome}_TFs_only.tab", genome=config['Genome'])
-        #expand('results/TF_tensors/{tf}.hdf5',tf=config['TF_EXPERIMENT'])
+        "results/fig/hist_experiment_QC.pdf",
+        expand('results/fig/svd/mm10/{tf}.pdf',tf=get_tfs('mm10') )
+        #expand( 'results/TF_tensors/hg19/{tf}.hdf5', tf=get_tfs('hg19') )
+        #expand( 'results/TF_tensors/hg38/{tf}.hdf5', tf=get_tfs('hg38') )
+
 
 rule GeneID_GeneName_Synonym_dict:
     input:
@@ -25,27 +61,77 @@ rule get_mm10_TF_list:
         cp {output} /bigdata/jbreda/genome/mm39_TF_list.csv
         """
 
-rule get_TF_in_ChIP:
+rule plot_chip_experiments_stats_QC:
+    input:
+        "resources/experimentList.tab"
+    output:
+        antigen_class_per_genome="results/fig/hist_antigen_class_per_genome.pdf",
+        QC="results/fig/hist_experiment_QC.pdf"
+    params:
+        genomes=config['Genome']
+    shell:
+        "python scripts/plot_chip_atlas_stats.py --infile {input} --outfig_antigen_class_per_genome {output.antigen_class_per_genome} --outfig_QC {output.QC} --genomes {params.genomes}"
+
+checkpoint get_ChIP_experiments_TF_QC_filtered:
     input:
         chip="resources/experimentList.tab",
         tfs="/bigdata/jbreda/genome/{genome}_TF_list.csv",
         gene_dict="/bigdata/jbreda/genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
     output:
-        'resources/experimentList_{genome}_TFs_only.tab'
+        "resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    params:
+        th_reads=config['Threshold']['n_reads'],
+        th_mapped_reads=config['Threshold']['f_mapped_reads'],
+        th_duplicates=config['Threshold']['f_duplicates'],
+        th_peaks=config['Threshold']['n_peaks']
     shell:
-        "python scripts/get_experimentList_TF.py --infile_chip {input.chip} --infile_tfs {input.tfs} --infile_gene_dict {input.gene_dict} --outfile {output} --genome {wildcards.genome}"
+        """
+        python scripts/get_experimentList_TF.py --infile_chip {input.chip} --infile_tfs {input.tfs} --infile_gene_dict {input.gene_dict} --outfile {output} --genome {wildcards.genome} --th_reads {params.th_reads} --th_mapped_reads {params.th_mapped_reads} --th_duplicates {params.th_duplicates} --th_peaks {params.th_peaks}
+        """
+
+#rule track_hub_all_TFs:
 
 rule make_tf_tensors:
     input:
-        lambda wildcards: expand('resources/tracks/{exp}.bw', exp=config['TF_EXPERIMENT'][wildcards.tf])
+        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
+        exp_list=get_experiments
     output:
-        'results/TF_tensors/{tf}.hdf5'
+        tensor='results/TF_tensors/{genome}/{tf}.hdf5'
+        failed='results/TF_tensors/{genome}/{tf}_failed.txt'
     params:
-        promoter='~/Datastructure/results/{wildcards.genome}/promoterome_{config[Window_kb]}kb.gff',
+        window_kb=config['Window_kb'],
         bin_size=config['bin_size']
     shell:
         """
-        python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --infile_promoters {params.promoter} --bin_size {params.bin_size} --outfile {output} --infiles_tf {input}
+        python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {params.window_kb} --bin_size {params.bin_size} --outfile {output.tensor} --outfile_failed {output.failed} --infiles_tf {input.exp_list}
         """
-#rule svd:
+
+rule svd:
+    input:
+        tensor='results/TF_tensors/{genome}/{tf}.hdf5'
+        failed='results/TF_tensors/{genome}/{tf}_failed.txt'
+    output:
+        U='results/svd/{genome}/{tf}_U.npy',
+        S='results/svd/{genome}/{tf}_S.npy',
+        Vh='results/svd/{genome}/{tf}_Vh.npy',
+        rho='results/corr/{genome}/{tf}_rho.npy'
+    shell:
+        """
+        python scripts/get_Chip_svd.py --tf {wildcards.tf} --infile_tensor {input.tensor} --infile_failed {input.failed} --outfile_U {output.U} --outfile_S {output.S} --outfile_Vh {output.Vh} --outfile_rho {output.rho}
+        """
+
+rule plot_svd:
+    input:
+        U='results/svd/{genome}/{tf}_U.npy',
+        S='results/svd/{genome}/{tf}_S.npy',
+        Vh='results/svd/{genome}/{tf}_Vh.npy',
+        rho='results/corr/{genome}/{tf}_rho.npy'
+    output:
+        'results/fig/svd/{genome}/{tf}.pdf'
+    shell:
+        """
+        python scripts/plot_svd_per_tf.py --tf {wildcards.tf} --infile_U {input.U} --infile_S {input.S} --infile_Vh {input.Vh} --infile_rho {input.rho} --outfig {output}
+        """
+
 #rule multivariate_gaussian:
+

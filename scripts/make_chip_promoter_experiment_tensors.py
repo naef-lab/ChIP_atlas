@@ -11,60 +11,71 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="TF to get experiments")
-    parser.add_argument('--infile_promoters'
+    parser.add_argument('--genome'
         ,required=True
         ,type=str
-        ,help="file with intronic reads per barcode")
+        ,choices=['mm10','mm39','hg19','hg38']
+        ,help="genome version")
+    parser.add_argument('--window_kb'
+        ,default=2
+        ,type=int
+        ,help="window size (in kb)")
     parser.add_argument('--bin_size'
         ,default=20
         ,type=int
         ,help="bin size")
-    parser.add_argument('--outfile'
-        ,required=True
-        ,type=str
-        ,help="Output hfd5 file with tensor")
     parser.add_argument('--infiles_tf'
         ,required=True
         ,type=str
         ,nargs='+'
         ,help="experiments coverage files")
+    parser.add_argument('--outfile'
+        ,required=True
+        ,type=str
+        ,help="Output hfd5 file with tensor")
+    parser.add_argument('--outfile_failed'
+        ,required=True
+        ,type=str
+        ,help="Output text file with tensor")
+    
 
     return parser.parse_args()
 
 if __name__ == '__main__':
 
     args = parse_argument()
+    infile_promoter = f"~/Datastructure/results/{args.genome}/promoterome_{args.window_kb}kb.gff"
 
     # load promoters
-    promoter = pd.read_csv(args.infile_promoters ,sep=r'\t|\;',header=None,usecols=[0,3,4,6,8,9,10,11,12],engine='python')
-    promoter.columns = ['chr','start','end','strand','ID','Name','Members','Annotations','CpG_class']
-    for col in promoter.columns[4:]:
-        promoter.loc[:,col].replace(to_replace='\"', value='', regex=True, inplace=True)
-        promoter.loc[:,col].replace(to_replace=f'{col}\=',value='',regex=True, inplace=True)
-
+    promoter = pd.read_csv(infile_promoter ,sep='\t')
+    promoter.chr = promoter.chr.apply(lambda x: 'chr'+x)
+                           
     # get tensor dimention and initialize
     N_prom = promoter.shape[0]
-    N_pos = int(2000/args.bin_size)
+    win = int(args.window_kb*1000)
+    N_pos = int(win/args.bin_size)
     N_exp = len(args.infiles_tf)
 
     X = torch.zeros([N_prom,N_pos,N_exp])
     X[:] = torch.nan
     failed_bw = []
-    for k,exp in enumerate(args.infiles_tf):
+    n=0
+    for exp in args.infiles_tf:
         try:
             with pyBigWig.open(exp) as bw:
                 for p in range(N_prom):
                     [chr,start,end] = promoter.loc[p,['chr','start','end']]
-                    X[p,:,k] = torch.from_numpy( np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float) )
+                    X[p,:,n] = torch.from_numpy( np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float) )
+                n+=1
         except:
-            print(f"Unable to open {exp}")
-            failed_bw.append(k)
-
-    # write tensor in out h5py file
+            failed_bw.append(exp)
+            print("failed " + exp)
+    
+    # write tensor in out h5py file after removing failed expeiment
     with h5py.File(args.outfile,'w') as hf:
-        hf.create_dataset(args.tf,data=X)
+        hf.create_dataset(args.tf,data=X[:,:,:n])
 
-    # write failed bw rows and files
-    with open(f'results/TF_tensors/{args.tf}_failed.txt','w') as fout:
-        for k in failed_bw:
-            fout.write(f'{k}\t{args.infiles_tf[k]}\n')
+    # write failed bw exp id
+    with open(args.outfile_failed,'w') as fout:
+        for exp in failed_bw:
+            fout.write(f'{exp}\n')
