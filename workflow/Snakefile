@@ -14,28 +14,32 @@ configfile: 'config/chip_seq.yaml'
 #    for tf in TF_EXPERIMENT[genome]:
         #TF_EXPERIMENT[genome][tf] = list(TF_EXPERIMENT[genome][tf])
 
-def get_experiments(wildcards):
+def get_chip_table(genome):
     #infile = checkpoints.get_ChIP_experiments_TF_QC_filtered.get(**wildcards).output[0]
-    infile=f"resources/experimentList_{wildcards.genome}_TFs_only_QC_filtered.tab"
+    infile=f"resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
+
+    # !!! remove Ctcf !!!
+    experiment_tf.drop(index=experiment_tf.loc[experiment_tf.antigen=='Ctcf'].index,inplace=True)
+
+    return experiment_tf
+
+def get_experiments(wildcards):
+    experiment_tf = get_chip_table(wildcards.genome)
     IDs = list(experiment_tf.loc[experiment_tf.antigen==wildcards.tf,'id'])
     files = [f"resources/tracks/{wildcards.genome}/{id}.bw" for id in IDs]
 
     return files
 
 def get_tfs(genome):
-    # input/output
-    infile=f"resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
-    #infile = checkpoints.get_ChIP_experiments_TF_QC_filtered.get(**wildcards).output[0]
-    experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
-    experiment_tf.columns = ['id','antigen']
-    
+    experiment_tf = get_chip_table(genome)
+
     return list(experiment_tf.antigen.unique())
 
 rule all:
     input:
-        "results/fig/hist_experiment_QC.pdf",
+        #"results/fig/hist_experiment_QC.pdf",
         expand('results/fig/svd/mm10/{tf}.pdf',tf=get_tfs('mm10') )
         #expand( 'results/TF_tensors/hg19/{tf}.hdf5', tf=get_tfs('hg19') )
         #expand( 'results/TF_tensors/hg38/{tf}.hdf5', tf=get_tfs('hg38') )
@@ -96,7 +100,7 @@ rule make_tf_tensors:
         infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
         exp_list=get_experiments
     output:
-        tensor='results/TF_tensors/{genome}/{tf}.hdf5'
+        tensor='results/TF_tensors/{genome}/{tf}.hdf5',
         failed='results/TF_tensors/{genome}/{tf}_failed.txt'
     params:
         window_kb=config['Window_kb'],
@@ -108,29 +112,23 @@ rule make_tf_tensors:
 
 rule svd:
     input:
-        tensor='results/TF_tensors/{genome}/{tf}.hdf5'
+        tensor='results/TF_tensors/{genome}/{tf}.hdf5',
         failed='results/TF_tensors/{genome}/{tf}_failed.txt'
     output:
-        U='results/svd/{genome}/{tf}_U.npy',
-        S='results/svd/{genome}/{tf}_S.npy',
-        Vh='results/svd/{genome}/{tf}_Vh.npy',
-        rho='results/corr/{genome}/{tf}_rho.npy'
+        'results/svd/{genome}/{tf}.hdf5'
     shell:
         """
-        python scripts/get_Chip_svd.py --tf {wildcards.tf} --infile_tensor {input.tensor} --infile_failed {input.failed} --outfile_U {output.U} --outfile_S {output.S} --outfile_Vh {output.Vh} --outfile_rho {output.rho}
+        python scripts/get_Chip_svd.py --tf {wildcards.tf} --infile_tensor {input.tensor} --infile_failed {input.failed} --outfile {output}
         """
 
 rule plot_svd:
     input:
-        U='results/svd/{genome}/{tf}_U.npy',
-        S='results/svd/{genome}/{tf}_S.npy',
-        Vh='results/svd/{genome}/{tf}_Vh.npy',
-        rho='results/corr/{genome}/{tf}_rho.npy'
+        'results/svd/{genome}/{tf}.hdf5'
     output:
         'results/fig/svd/{genome}/{tf}.pdf'
     shell:
         """
-        python scripts/plot_svd_per_tf.py --tf {wildcards.tf} --infile_U {input.U} --infile_S {input.S} --infile_Vh {input.Vh} --infile_rho {input.rho} --outfig {output}
+        python scripts/plot_svd_per_tf.py --tf {wildcards.tf} --infile {input} --outfig {output}
         """
 
 #rule multivariate_gaussian:

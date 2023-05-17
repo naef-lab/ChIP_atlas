@@ -1,8 +1,5 @@
-resources/complex
-resources/tracks
-resources/mm10_promoters_v2.gff.gz
-resources/mm10_TSC_v2.gff.gz
-resources/interactive_trees
-tmp
-results
-.snakemake
+resources/
+results/
+.snakemake/
+stdout/
+stderr/

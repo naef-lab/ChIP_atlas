@@ -58,6 +58,11 @@ if __name__ == '__main__':
                 (chip['f_duplicates']< args.th_duplicates) &
                 (chip['n_peaks']     > args.th_peaks) ]
     
+    # apply stronger thresholds to mouse Ctcf
+    if args.genome == 'mm10':
+        chip[chip.antigen=='Ctcf']
+
+    
     print(f'{args.genome}: {chip.shape[0]/n_tot} passed QC')
 
     # get TF list

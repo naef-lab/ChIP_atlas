@@ -19,22 +19,10 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="TF tensor")
-    parser.add_argument('--outfile_U'
+    parser.add_argument('--outfile'
         ,required=True
         ,type=str
-        ,help="SVD_U")
-    parser.add_argument('--outfile_S'
-        ,required=True
-        ,type=str
-        ,help="SVD_S")
-    parser.add_argument('--outfile_Vh'
-        ,required=True
-        ,type=str
-        ,help="SVD_Vh")
-    parser.add_argument('--outfile_rho'
-        ,required=True
-        ,type=str
-        ,help="Pearson corr. coeff between pairs of experiments")
+        ,help="hdf5 with SVD and pearson's correlation")
 
     return parser.parse_args()
 
@@ -63,17 +51,15 @@ if __name__ == '__main__':
     rho = np.corrcoef(X.T)
     # SVD
     U,S,Vh = np.linalg.svd(X,full_matrices=False)
-    
+
     # change sign such that sum(U,0) > 0
     sign = np.sign(U.sum(axis=0,keepdims=True))
     U = sign*U
     Vh = sign.T*Vh
 
-    np.save(args.outfile_rho,rho)
-    np.save(args.outfile_U,U)
-    np.save(args.outfile_S,S)
-    np.save(args.outfile_Vh,Vh)
-
-
-
-
+    # open hdf5 file
+    with h5py.File(args.outfile,'w') as hf:
+        hf.create_dataset('rho',data=rho,compression="gzip")
+        hf.create_dataset('U',data=U,compression="gzip")
+        hf.create_dataset('S',data=S,compression="gzip")
+        hf.create_dataset('Vh',data=Vh,compression="gzip")

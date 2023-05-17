@@ -12,22 +12,14 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="TF")
-    parser.add_argument('--infile_U'
+    parser.add_argument('--infile'
         ,required=True
         ,type=str
-        ,help="SVD_U")
-    parser.add_argument('--infile_S'
+        ,help="hdf5 with SVD and pearson's correlation")
+    parser.add_argument('--outfig'
         ,required=True
         ,type=str
-        ,help="SVD_S")
-    parser.add_argument('--infile_Vh'
-        ,required=True
-        ,type=str
-        ,help="SVD_Vh")
-    parser.add_argument('--infile_rho'
-        ,required=True
-        ,type=str
-        ,help="Pearson corr. coeff between pairs of experiments")
+        ,help="pdf figure")
 
     return parser.parse_args()
 
@@ -36,9 +28,11 @@ if __name__ == '__main__':
 
     args = parse_argument()
     
-    rho = np.load(args.infile_rho)
-    S = np.load(args.infile_S)
-    Vh = np.load(args.infile_Vh)
+    # open hdf5 file
+    with h5py.File(args.infile,'r') as hf:
+        rho = hf['rho'][:]
+        S = hf['S'][:]
+        Vh = hf['Vh'][:]
 
     # experiment hierarchical clustering based on corr matrix
     n = rho.shape[0]
