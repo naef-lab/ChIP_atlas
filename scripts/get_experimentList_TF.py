@@ -60,8 +60,10 @@ if __name__ == '__main__':
     
     # apply stronger thresholds to mouse Ctcf
     if args.genome == 'mm10':
-        chip[chip.antigen=='Ctcf']
-
+        ctcf = chip[chip.antigen=='Ctcf']
+        n_peaks_per_unique_mapped_reads = ctcf.n_peaks/(ctcf.f_mapped*ctcf.n_reads*(1-ctcf.f_duplicates))
+        idx_out = ctcf.loc[ n_peaks_per_unique_mapped_reads < n_peaks_per_unique_mapped_reads.quantile(3/4) ].index
+        chip.drop(index=idx_out,inplace=True)
     
     print(f'{args.genome}: {chip.shape[0]/n_tot} passed QC')
 

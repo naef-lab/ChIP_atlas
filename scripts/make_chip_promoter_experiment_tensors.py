@@ -61,6 +61,7 @@ if __name__ == '__main__':
     failed_bw = []
     n=0
     for exp in args.infiles_tf:
+        print(exp)
         try:
             with pyBigWig.open(exp) as bw:
                 for p in range(N_prom):

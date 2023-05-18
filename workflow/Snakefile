@@ -20,9 +20,6 @@ def get_chip_table(genome):
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
 
-    # !!! remove Ctcf !!!
-    experiment_tf.drop(index=experiment_tf.loc[experiment_tf.antigen=='Ctcf'].index,inplace=True)
-
     return experiment_tf
 
 def get_experiments(wildcards):
@@ -40,10 +37,12 @@ def get_tfs(genome):
 rule all:
     input:
         #"results/fig/hist_experiment_QC.pdf",
-        expand('results/fig/svd/mm10/{tf}.pdf',tf=get_tfs('mm10') )
+        #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10']),
+        #expand( 'results/TF_tensors/mm10/{tf}.hdf5', tf=get_tfs('mm10') )
         #expand( 'results/TF_tensors/hg19/{tf}.hdf5', tf=get_tfs('hg19') )
         #expand( 'results/TF_tensors/hg38/{tf}.hdf5', tf=get_tfs('hg38') )
-
+        expand('results/svd/mm10/{tf}.hdf5', tf=get_tfs('mm10') )
+        #expand('results/fig/svd/mm10/{tf}.pdf', tf=get_tfs('mm10') )
 
 rule GeneID_GeneName_Synonym_dict:
     input:
@@ -105,6 +104,7 @@ rule make_tf_tensors:
     params:
         window_kb=config['Window_kb'],
         bin_size=config['bin_size']
+    threads: 2
     shell:
         """
         python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {params.window_kb} --bin_size {params.bin_size} --outfile {output.tensor} --outfile_failed {output.failed} --infiles_tf {input.exp_list}
@@ -112,13 +112,13 @@ rule make_tf_tensors:
 
 rule svd:
     input:
-        tensor='results/TF_tensors/{genome}/{tf}.hdf5',
-        failed='results/TF_tensors/{genome}/{tf}_failed.txt'
+        'results/TF_tensors/{genome}/{tf}.hdf5'
     output:
         'results/svd/{genome}/{tf}.hdf5'
+    threads: 24
     shell:
         """
-        python scripts/get_Chip_svd.py --tf {wildcards.tf} --infile_tensor {input.tensor} --infile_failed {input.failed} --outfile {output}
+        python scripts/get_Chip_svd.py --tf {wildcards.tf} --infile {input} --outfile {output}
         """
 
 rule plot_svd:

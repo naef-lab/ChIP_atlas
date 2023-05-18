@@ -76,11 +76,17 @@ if __name__ == '__main__':
     # get only TFs and others
     chip = chip.loc[chip.antigen_class == 'TFs and others',:]
 
-    QC = pd.DataFrame([[float(n) for n in qc.split(',')] for qc in chip.QC],columns=[r'$log_{10}$ nr. of reads', 'frac. mapped', 'frac. duplicates', r'$log_{10}$ nr. of peaks + 1'],index=chip.index)
-    QC.iloc[:,0] = np.log10( QC.iloc[:,0] )
+    QC = pd.DataFrame([[float(n) for n in qc.split(',')] for qc in chip.QC],columns=['n_reads','f_mapped','f_duplicates','n_peaks'],index=chip.index)
     QC.iloc[:,1] /= 100
     QC.iloc[:,2] /= 100
+    QC['peaks_per_unique_mapped_reads'] = QC.n_peaks/(QC.n_reads * QC.f_mapped * (1-QC.f_duplicates))
+    QC.loc[(QC.n_peaks==0) | (QC.f_mapped==0),'peaks_per_unique_mapped_reads'] = 0
+
+    QC.iloc[:,0] = np.log10( QC.iloc[:,0] )
     QC.iloc[:,3] = np.log10( QC.iloc[:,3]+1 )
+    QC.iloc[:,4] = np.log10( QC.iloc[:,4]+ 1e-6 )
+    QC.columns = [r'$log_{10}$ nr. of reads', 'frac. mapped', 'frac. duplicates', r'$log_{10}$ nr. of peaks + 1',r'$log_{10}$ peaks/(uniq mapped read)']
+
     corr_QC = np.corrcoef( QC.values.T )
 
     chip = pd.concat([chip,QC],axis=1)
@@ -88,12 +94,13 @@ if __name__ == '__main__':
     scale = [['linear','log'],
              ['linear','log'],
              ['linear','linear'],
+             ['linear','log'],
              ['linear','log']]
 
     Genome = chip.genome.unique()
 
     fig = plt.figure()
-    cols = 2
+    cols = 3
     rows = 3
 
     for i,col in enumerate(QC.columns):

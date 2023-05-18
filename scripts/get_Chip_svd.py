@@ -11,11 +11,7 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="TF")
-    parser.add_argument('--infile_tensor'
-        ,required=True
-        ,type=str
-        ,help="TF tensor")
-    parser.add_argument('--infile_failed'
+    parser.add_argument('--infile'
         ,required=True
         ,type=str
         ,help="TF tensor")
@@ -31,14 +27,8 @@ if __name__ == '__main__':
 
     args = parse_argument()
 
-    with h5py.File(args.infile_tensor,'r') as hf:
+    with h5py.File(args.infile,'r') as hf:
         X = hf[args.tf][:]
-
-    # remove experiments failing to open
-    with open(args.infile_failed,'r') as f:
-        idx_out = [int(line.strip().split('\t')[0]) for line in f.readlines()]
-    if len(idx_out)>0:
-        X = np.delete(X,idx_out,axis=2)
 
     # replace nans with 0s
     X[np.isnan(X)] = 0
@@ -59,7 +49,7 @@ if __name__ == '__main__':
 
     # open hdf5 file
     with h5py.File(args.outfile,'w') as hf:
-        hf.create_dataset('rho',data=rho,compression="gzip")
-        hf.create_dataset('U',data=U,compression="gzip")
-        hf.create_dataset('S',data=S,compression="gzip")
-        hf.create_dataset('Vh',data=Vh,compression="gzip")
+        hf.create_dataset('rho',data=rho)
+        hf.create_dataset('U',data=U)
+        hf.create_dataset('S',data=S)
+        hf.create_dataset('Vh',data=Vh)

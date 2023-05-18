@@ -1,5 +1,5 @@
-resources/
-results/
+resources
+results
 .snakemake/
 stdout/
 stderr/

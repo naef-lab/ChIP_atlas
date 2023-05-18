@@ -3,7 +3,6 @@ import pandas as pd
 import os
 import h5py
 from scipy.linalg import pinvh
-
 from scipy.stats import multivariate_normal
 
 if __name__ == '__main__':
@@ -12,51 +11,30 @@ if __name__ == '__main__':
     infile='resources/experimentList_mm10_TFs_only_QC_filtered.tab'
     experiment_tf = pd.read_csv(infile,sep='\t',header=None,usecols=[0,3],index_col=0)
     TFs = experiment_tf.loc[:,3].unique()
-    TFs[TFs!='Ctcf']
 
-    N_prom = 30114
-    N_pos = 100
-    N_tf = TFs.shape[0]
-    N_pc = 3
+    N_bin = 10
 
-    X = np.zeros([N_tf,N_prom*N_pos])
+    infile = 'results/tensor_TFsvd1_posbin_prom.hdf5'
 
-    for t,tf in enumerate(TFs):
-        print(np.round(t/N_tf,3))
-        
-        infiles_svd={'U':f'results/svd/{tf}_U.npy','S':f'results/svd/{tf}_S.npy','Vh':f'results/svd/{tf}_Vh.npy','rho':f'results/corr/{tf}_rho.npy'}
-
-        U = np.load(infiles_svd['U'])
-        S = np.load(infiles_svd['S'])
-        X[t,:] = U[:,0] @ S[0]
-
-
-    # remove TFs with nans everywhere
-    idx_out = np.isnan(X).all(axis=1)
-    X = X[~idx_out,:]
-    TFs = TFs[~idx_out]
+    with h5py.File(infile,'r') as hf:
+        X = hf[str(N_bin)][:]
 
     # compute mean, covariance matrix and save
-    mu = np.nanmean(X,axis=1)
-    outfile = 'results/TF_mean.npy'
-    np.save(outfile,mu)
+    #mu = np.nanmean(X,axis=1)
+    #outfile = 'results/TF_mean.npy'
+    #np.save(outfile,mu)
+
+    C = np.cov(X)
     
-    if True:
-        # replace nans with 0s
-        X[np.isnan(X)] = 0
-        C = np.cov(X)
-    else:
-        C = np.ma.cov(np.ma.masked_invalid(X))
-    
-    outfile = 'results/TF_covariance_matrix.npy'
-    np.save(outfile,C)
+    #outfile = 'results/TF_covariance_matrix.npy'
+    #np.save(outfile,C)
 
     # plot covariance matrix
 
     # invert covariance
     Sigma = pinvh(C)
-    outfile = 'results/TF_inverse_covariance_matrix.npy'
-    np.save(outfile,Sigma)
+    #outfile = 'results/TF_inverse_covariance_matrix.npy'
+    #np.save(outfile,Sigma)
 
     # my_gene = ...
 

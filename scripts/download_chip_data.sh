@@ -43,7 +43,8 @@
 #     grep -v "5-mC" > experimentList_hg19_TFs.tab
 
 Genome=hg38
-metadata="resources/experimentList_${Genome}_TFs.tab"
+metadata="resources/experimentList_${Genome}_TFs_only_QC_filtered.tab"
+
 mapfile -t EXPERIMENT_ID  < <(cut -f1 "$metadata")
 Threshold=05
 
