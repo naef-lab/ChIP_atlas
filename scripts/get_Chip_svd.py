@@ -1,16 +1,10 @@
 import numpy as np
 import pandas as pd
 import h5py
-import pickle
-import os
 import argparse
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Plot histogram of experiments QC')
-    parser.add_argument('--tf'
-        ,required=True
-        ,type=str
-        ,help="TF")
     parser.add_argument('--infile'
         ,required=True
         ,type=str
@@ -28,7 +22,7 @@ if __name__ == '__main__':
     args = parse_argument()
 
     with h5py.File(args.infile,'r') as hf:
-        X = hf[args.tf][:]
+        X = hf['chip_prom_pos_exp'][:]
 
     # replace nans with 0s
     X[np.isnan(X)] = 0

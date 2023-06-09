@@ -1,14 +1,16 @@
 #!/bin/bash
 
-infile='resources/to_dowload.txt'
+
+Genome="hg38"
+
+infile="resources/to_dowload_${Genome}.txt"
 mapfile -t to_download  < <(cat "$infile")
 
-Genome="mm10"
 # get files
 for Experimental_ID in "${to_download[@]}"
 do
     
-    outfile="resources/tracks/${Experimental_ID}"
+    outfile="resources/tracks/${Genome}/${Experimental_ID}"
     if [ -e "$outfile" ]
     then
         rm "$outfile"

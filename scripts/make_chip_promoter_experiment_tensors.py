@@ -1,8 +1,7 @@
-import torch
+import numpy as np
 import pandas as pd
 import argparse
 import pyBigWig
-import numpy as np
 import h5py
 
 def parse_argument():
@@ -33,18 +32,13 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="Output hfd5 file with tensor")
-    parser.add_argument('--outfile_failed'
-        ,required=True
-        ,type=str
-        ,help="Output text file with tensor")
-    
 
     return parser.parse_args()
 
 if __name__ == '__main__':
 
     args = parse_argument()
-    infile_promoter = f"~/Datastructure/results/{args.genome}/promoterome_{args.window_kb}kb.gff"
+    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed"
 
     # load promoters
     promoter = pd.read_csv(infile_promoter ,sep='\t')
@@ -56,27 +50,30 @@ if __name__ == '__main__':
     N_pos = int(win/args.bin_size)
     N_exp = len(args.infiles_tf)
 
-    X = torch.zeros([N_prom,N_pos,N_exp])
-    X[:] = torch.nan
+    X = np.zeros([N_prom,N_pos,N_exp])
+    X[:] = np.nan
+    exp_id = []
     failed_bw = []
     n=0
     for exp in args.infiles_tf:
-        print(exp)
+        print(f'{exp}... ',end='')
         try:
             with pyBigWig.open(exp) as bw:
                 for p in range(N_prom):
                     [chr,start,end] = promoter.loc[p,['chr','start','end']]
-                    X[p,:,n] = torch.from_numpy( np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float) )
+                    X[p,:,n] = np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float)
                 n+=1
+            exp_id.append(exp.split('/')[3].split('.')[0])
+            print('done')
         except:
-            failed_bw.append(exp)
-            print("failed " + exp)
+            failed_bw.append(exp.split('/')[3].split('.')[0])
+            print('failed')
     
+    X = X[:,:,:n]
+    print(X.shape)
     # write tensor in out h5py file after removing failed expeiment
     with h5py.File(args.outfile,'w') as hf:
-        hf.create_dataset(args.tf,data=X[:,:,:n])
-
-    # write failed bw exp id
-    with open(args.outfile_failed,'w') as fout:
-        for exp in failed_bw:
-            fout.write(f'{exp}\n')
+        hf.create_dataset('chip_prom_pos_exp',data=X)
+        hf.create_dataset('experiment_id',data=exp_id)
+        if len(failed_bw)>0:
+            hf.create_dataset('failed_experiment',data=failed_bw)

@@ -23,6 +23,18 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="Output figure pdf")
+    parser.add_argument('--th_reads'
+        ,default=1000
+        ,type=int)
+    parser.add_argument('--th_mapped_reads'
+        ,default=0.5
+        ,type=float)
+    parser.add_argument('--th_duplicates'
+        ,default=0.5
+        ,type=float)
+    parser.add_argument('--th_peaks'
+        ,default=10
+        ,type=int)
 
     return parser.parse_args()
 
@@ -42,15 +54,6 @@ def plot_stats(chip,outfig):
     fig.set_size_inches([cols*8,rows*6])
     plt.tight_layout()
     fig.savefig(outfig)
-
-    #a = ['a', 'a', 'a', 'a', 'b', 'b', 'c', 'c', 'c', 'd', 'e', 'e', 'e', 'e', 'e']
-    #letter_counts = Counter(a)
-    #df = pandas.DataFrame.from_dict(letter_counts, orient='index')
-    #df.plot(kind='bar')
-
-
-    #X = [ chip.loc[chip.genome == genome,'antigen_class'].values for genome in chip.genome.unique() ]
-
 
 
 if __name__ == '__main__':
@@ -96,30 +99,67 @@ if __name__ == '__main__':
              ['linear','linear'],
              ['linear','log'],
              ['linear','log']]
+    
+    thresholds = [np.log10(args.th_reads), args.th_mapped_reads, args.th_duplicates, np.log10(args.th_peaks)]
 
     Genome = chip.genome.unique()
 
     fig = plt.figure()
-    cols = 3
-    rows = 3
+    cols = 2
+    rows = 2
 
-    for i,col in enumerate(QC.columns):
+    for i,col in enumerate(QC.columns[:-1]):
         
         ax = fig.add_subplot(rows,cols,i+1)
         x = [ chip.loc[chip.genome == genome,col].values for genome in Genome ]
 
-        ax.hist(x,bins=50,label=Genome)
-        #QC.iloc[:,i].hist(bins=50,ax=ax)
+        ax.hist(x,bins=20,label=Genome)
+        ylim = ax.get_ylim()
+        th = [2*[thresholds[i]],ylim]
+        ax.plot(th[0],th[1])
         ax.set_xscale(scale[i][0])
         ax.set_yscale(scale[i][1])
         ax.set_xlabel(QC.columns[i])
         ax.set_ylabel('nr. of exp.')
-        ax.legend(Genome)
+        if i==0:
+            ax.legend(Genome)
     
+    fig.set_size_inches([cols*4,rows*3])
+    plt.tight_layout()
+    fig.savefig(args.outfig_QC)
+
+    i=4
+
+
+    fig = plt.figure()
+    cols = 1
+    rows = 1
+    ax = fig.add_subplot(rows,cols,1)
+    
+    col = QC.columns[-1]
+    x = [ chip.loc[chip.genome == genome,col].values for genome in Genome ]
+
+    ax.hist(x,bins=20,label=Genome)
+    ax.set_xscale(scale[i][0])
+    ax.set_yscale(scale[i][1])
+    ax.set_xlabel(QC.columns[i])
+    ax.set_ylabel('nr. of exp.')
+    ax.legend(Genome)
+
+    fig.set_size_inches([cols*6,rows*4])
+    plt.tight_layout()
+    fig.savefig("results/fig/hist_peaks_per_unique_mapped_read.pdf")
+
+
+    fig = plt.figure()
+    cols = 2
+    rows = 1
+    i=0
+
     colors =  [ plt.cm.tab10(np.where(g==Genome)[0][0]) for g in chip.genome ]
 
     i+=1
-    ax = fig.add_subplot(rows,cols,i+1)
+    ax = fig.add_subplot(rows,cols,i)
 
     ax.scatter(x=chip['$log_{10}$ nr. of reads'],y=chip['$log_{10}$ nr. of peaks + 1'],c=colors,s=1,alpha=0.1,rasterized=True)
     ax.set_xlabel('$log_{10}$ nr. of reads')
@@ -139,7 +179,7 @@ if __name__ == '__main__':
 
 
     i+=1
-    ax = fig.add_subplot(rows,cols,i+1)
+    ax = fig.add_subplot(rows,cols,i)
 
     ax.scatter(x=chip['frac. mapped'],y=chip['$log_{10}$ nr. of peaks + 1'],c=colors,s=chip['$log_{10}$ nr. of reads'],alpha=0.1,rasterized=True)
     ax.set_ylabel('$log_{10}$ nr. of peaks + 1')
@@ -148,7 +188,4 @@ if __name__ == '__main__':
     
     fig.set_size_inches([cols*8,rows*6])
     plt.tight_layout()
-    fig.savefig(args.outfig_QC,dpi=150)
-
-
-    
+    fig.savefig("results/fig/scatter_QC_vals",dpi=150)

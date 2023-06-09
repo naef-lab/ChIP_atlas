@@ -1,11 +1,8 @@
 Genome:
   - mm10
-  #- mm39 no ChIP experiment on mm39
-  - hg19
   - hg38
 
 Window_kb: 2
-
 bin_size: 20
 
 Threshold:
@@ -13,6 +10,7 @@ Threshold:
   f_mapped_reads: 0.5
   f_duplicates: 0.5
   n_peaks: 10
+  n_exp_per_tf: 250
 
 Ensembl:
   GeneID_GeneName_Synonyms:

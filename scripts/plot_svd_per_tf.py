@@ -1,17 +1,12 @@
 import numpy as np
 import pandas as pd
 import h5py
-import pickle
-import os
 import matplotlib.pyplot as plt
 from scipy.cluster import hierarchy
+import argparse
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Plot histogram of experiments QC')
-    parser.add_argument('--tf'
-        ,required=True
-        ,type=str
-        ,help="TF")
     parser.add_argument('--infile'
         ,required=True
         ,type=str

@@ -31,6 +31,9 @@ def parse_argument():
     parser.add_argument('--th_peaks'
         ,default=10
         ,type=int)
+    parser.add_argument('--th_exp_per_tf'
+        ,default=250
+        ,type=int)
     
     return parser.parse_args()
 
@@ -51,19 +54,16 @@ if __name__ == '__main__':
     QC.iloc[:,2] /= 100
     chip = pd.concat([chip,QC],axis=1)
 
+    # get peaks per unique mapped reads
+    chip.loc[:,'n_peaks_per_unique_mapped_reads'] = chip.n_peaks/(chip.f_mapped*chip.n_reads*(1-chip.f_duplicates))
+
     n_tot = chip.shape[0]
+
     # apply thresholds
     chip = chip[(chip['n_reads']     > args.th_reads) & 
                 (chip['f_mapped']    > args.th_mapped_reads) &
                 (chip['f_duplicates']< args.th_duplicates) &
                 (chip['n_peaks']     > args.th_peaks) ]
-    
-    # apply stronger thresholds to mouse Ctcf
-    if args.genome == 'mm10':
-        ctcf = chip[chip.antigen=='Ctcf']
-        n_peaks_per_unique_mapped_reads = ctcf.n_peaks/(ctcf.f_mapped*ctcf.n_reads*(1-ctcf.f_duplicates))
-        idx_out = ctcf.loc[ n_peaks_per_unique_mapped_reads < n_peaks_per_unique_mapped_reads.quantile(3/4) ].index
-        chip.drop(index=idx_out,inplace=True)
     
     print(f'{args.genome}: {chip.shape[0]/n_tot} passed QC')
 
@@ -107,5 +107,19 @@ if __name__ == '__main__':
     print(f'{args.genome}: {len(tf_id)/chip.shape[0]} in TF list')
     chip = chip.loc[tf_id,:]
     print(f'{args.genome}: {len(chip.antigen.unique())} unique TF')
+
+    # Take top experiments according to n_peaks_per_unique_mapped_reads for TFs with more than 250 experiments
+    n_tot = chip.shape[0]
+    TF,N = np.unique(chip.antigen,return_counts=True)
+    for my_tf in TF[N>args.th_exp_per_tf]:
+        print(my_tf)
+        my_chip = chip.loc[chip.antigen==my_tf,['n_peaks_per_unique_mapped_reads']]
+        th = np.sort(my_chip.n_peaks_per_unique_mapped_reads.values)[-args.th_exp_per_tf]
+
+        idx_out = my_chip.loc[my_chip.n_peaks_per_unique_mapped_reads<th,:].index
+        chip.drop(index=idx_out,inplace=True)
     
+    print(f'{args.genome}: {chip.shape[0]/n_tot} atfer shortening max nr. exp per TF')
+    
+    # write output table
     chip.to_csv(args.outfile,sep='\t')
