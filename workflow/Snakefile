@@ -43,12 +43,13 @@ def get_tfs_st_exp_gt1(genome):
 rule all:
     input:
         "results/fig/hist_experiment_QC.pdf",
-        expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['hg38']),
+        #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
         #expand('results/mm10/TF_tensors/{tf}.hdf5', tf=get_tfs('mm10') ),
-        expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
         #expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
         #expand('results/fig/mm10/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('mm10') )
-        #expand( 'results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') )
+        expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
+        expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') )
+        
 
 rule GeneID_GeneName_Synonym_dict:
     input:
@@ -76,7 +77,7 @@ rule plot_chip_experiments_stats_QC:
     output:
         antigen_class_per_genome="results/fig/hist_antigen_class_per_genome.pdf",
         QC="results/fig/hist_experiment_QC.pdf"
-    params:
+    params:    
         genomes=config['Genome'],
         th_reads=config['Threshold']['n_reads'],
         th_mapped_reads=config['Threshold']['f_mapped_reads'],
@@ -114,10 +115,10 @@ rule make_tf_tensors:
     params:
         window_kb=config['Window_kb'],
         bin_size=config['bin_size']
-    threads: 1
+    threads: 12
     shell:
         """
-        python scripts/make_chip_promoter_experiment_tensors.py --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {params.window_kb} --bin_size {params.bin_size} --outfile {output.tensor} --infiles_tf {input.exp_list}
+        python scripts/make_chip_promoter_experiment_tensors.py --threads {threads} --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {params.window_kb} --bin_size {params.bin_size} --outfile {output.tensor} --infiles_tf {input.exp_list}
         """
 
 rule svd:

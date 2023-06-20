@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     # get binned chip signal per tf per prom
     infile = f'results/{genome}/tensor_TFsvd1_posbin_prom.hdf5'
-    N_bin = 4
+    N_bin = 1
     with h5py.File(infile,'r') as hf:
         X = hf[str(N_bin)][:]
     # row: samples (prom_pos)
@@ -173,7 +173,7 @@ if __name__ == '__main__':
     my_prec = lw_prec
 
     Gene_subset = ['aminoacyl_tRNA_synthetase','ribosomal_protein_genes','core_circadian_clock_genes']
-    Gene_subset = ['core_circadian_clock_genes']
+    #Gene_subset = ['core_circadian_clock_genes']
 
     # 1D conditional multivariate gaussian
     if True:
@@ -240,31 +240,44 @@ if __name__ == '__main__':
             # gaussian kernel
             GK = {}
             TFs_out = {}
-            x = np.linspace(0,1,201)
+            y = np.linspace(0,1,201)
             y_tick = np.linspace(0,1,5)
             
             for f,p in enumerate(P):
                 print(p)
-                GK[p] = np.zeros([x.shape[0],n_tf])
+                GK[p] = np.zeros([y.shape[0],n_tf])
                 for tf in range(n_tf):
-                    GK[p][:,tf] = gaussian_kde(P[p][:,tf])(x)
+                    GK[p][:,tf] = gaussian_kde(P[p][:,tf])(y)
 
                 GK[p] = GK[p]/GK[p].max(0)
                 sort_idx = np.argsort(np.argmax(GK[p],0))
                 GK[p] = GK[p][:,sort_idx]
 
-                idx_tf_high = np.argmax(GK[p],0) > .9*len(x)
-                idx_tf_low = np.argmax(GK[p],0) < .1*len(x)
+                ax = axes[f]
+                ax.imshow(GK[p],origin='lower',interpolation='none',cmap='YlOrBr',aspect='auto',extent=[0-.5,n_tf-.5,0,1])
+                ax.set_yticks(y_tick)
+                ax.set_yticklabels(y_tick)
+                ax.set_xticks([])
+
+                # annotate high tfs
+                idx_tf = np.argmax(GK[p],0) > .8*len(y)
                 my_tfs = TFs[sort_idx][idx_tf]
                 tick_pos = np.arange(n_tf)[idx_tf]
                 label_pos = np.linspace(0,n_tf-1,sum(idx_tf))
-                y_pos = -.1*len(x)
+                y_pos = 1.1
+                for i,j in enumerate(np.where(idx_tf)[0]):
+                    if sum(idx_tf)>20:
+                        ax.text(label_pos[i],y_pos,TFs[sort_idx][j],va='bottom',ha='center',rotation=90)
+                    else:
+                        ax.text(label_pos[i],y_pos,TFs[sort_idx][j],va='bottom',ha='center')
+                    ax.plot([label_pos[i],tick_pos[i]] ,[y_pos,1],'k-',lw=.1)
 
-                ax = axes[f]
-                ax.imshow(GK[p],origin='lower',interpolation='none',cmap='YlOrBr',aspect='auto')
-                ax.set_yticks([np.where(x==y)[0][0] for y in y_tick])
-                ax.set_yticklabels(y_tick)
-                ax.set_xticks([])
+                # annotate low tfs
+                idx_tf = np.argmax(GK[p],0) < .2*len(y)
+                my_tfs = TFs[sort_idx][idx_tf]
+                tick_pos = np.arange(n_tf)[idx_tf]
+                label_pos = np.linspace(0,n_tf-1,sum(idx_tf))
+                y_pos = -.1
                 for i,j in enumerate(np.where(idx_tf)[0]):
                     if sum(idx_tf)>20:
                         ax.text(label_pos[i],y_pos,TFs[sort_idx][j],va='top',ha='center',rotation=90)
@@ -272,9 +285,9 @@ if __name__ == '__main__':
                         ax.text(label_pos[i],y_pos,TFs[sort_idx][j],va='top',ha='center')
                     ax.plot([label_pos[i],tick_pos[i]] ,[y_pos,0],'k-',lw=.1)
                 if 'rnd' in p:
-                    ax.set_title(f'{p} ({n_gene})')
+                    ax.set_ylabel(f'{p} ({n_gene})')
                 else:
-                    ax.set_title(f'{p} {gene_subset} ({n_gene})')
+                    ax.set_ylabel(f'{p} {gene_subset} ({n_gene})')
                 plt.rcParams["axes.edgecolor"]=(1,1,1,0)
 
                 if p == 'cond':

@@ -3,9 +3,15 @@ import pandas as pd
 import argparse
 import pyBigWig
 import h5py
+import multiprocessing
+from functools import partial
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Save ChIP signals for tf in tensor (N_promoters x N_positions X N_experiments).')
+    parser.add_argument('--threads'
+        ,required=True
+        ,type=int
+        ,help="nr. of threads to use")
     parser.add_argument('--tf'
         ,required=True
         ,type=str
@@ -35,6 +41,19 @@ def parse_argument():
 
     return parser.parse_args()
 
+def fill_experiment(exp,promoter,N_pos):
+    N_prom = promoter.shape[0]
+    X = np.zeros([N_prom,N_pos])
+    try:
+        with pyBigWig.open(exp) as bw:
+            for p in range(N_prom):
+                [chr,start,end] = promoter.loc[p,['chr','start','end']]
+                X[p,:] = np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float)
+    except:
+        X[p,:] = -1
+
+    return X
+
 if __name__ == '__main__':
 
     args = parse_argument()
@@ -50,27 +69,21 @@ if __name__ == '__main__':
     N_pos = int(win/args.bin_size)
     N_exp = len(args.infiles_tf)
 
-    X = np.zeros([N_prom,N_pos,N_exp])
-    X[:] = np.nan
-    exp_id = []
-    failed_bw = []
-    n=0
-    for exp in args.infiles_tf:
-        print(f'{exp}... ',end='')
-        try:
-            with pyBigWig.open(exp) as bw:
-                for p in range(N_prom):
-                    [chr,start,end] = promoter.loc[p,['chr','start','end']]
-                    X[p,:,n] = np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float)
-                n+=1
-            exp_id.append(exp.split('/')[3].split('.')[0])
-            print('done')
-        except:
-            failed_bw.append(exp.split('/')[3].split('.')[0])
-            print('failed')
+    pool = multiprocessing.Pool(args.threads)
+    outs = pool.map(partial(fill_experiment, promoter=promoter, N_pos=N_pos), args.infiles_tf)
+
+    X = np.array(outs)
+    X = np.transpose(X,axes=(1,2,0))
+    to_keep = np.nanmean(np.nanmean(X,axis=0),axis=0) > 0
+    X = X[:,:,to_keep]
     
-    X = X[:,:,:n]
-    print(X.shape)
+    IDs = np.array( [exp.split('/')[3].split('.')[0] for exp in args.infiles_tf] )
+    exp_id = IDs[to_keep]
+    failed_bw = IDs[~to_keep]
+
+    exp_id = [str(e) for e in exp_id]
+    failed_bw = [str(e) for e in failed_bw]
+
     # write tensor in out h5py file after removing failed expeiment
     with h5py.File(args.outfile,'w') as hf:
         hf.create_dataset('chip_prom_pos_exp',data=X)
