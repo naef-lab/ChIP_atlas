@@ -13,6 +13,10 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="hdf5 with SVD and pearson's correlation")
+    parser.add_argument('--size_factor'
+        ,required=True
+        ,type=float
+        ,help="Size factor for normalization")
 
     return parser.parse_args()
 
@@ -23,6 +27,9 @@ if __name__ == '__main__':
 
     with h5py.File(args.infile,'r') as hf:
         X = hf['chip_prom_pos_exp'][:]
+
+    # normalize by total counts
+    X = ( X / np.nansum(X,axis=0,keepdims=True).sum(axis=1,keepdims=True) ) * args.size_factor
 
     # replace nans with 0s
     X[np.isnan(X)] = 0

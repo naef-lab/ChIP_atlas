@@ -45,11 +45,13 @@ rule all:
         "results/fig/hist_experiment_QC.pdf",
         #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
         #expand('results/mm10/TF_tensors/{tf}.hdf5', tf=get_tfs('mm10') ),
-        #expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
-        #expand('results/fig/mm10/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('mm10') )
-        expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
-        expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') )
-        
+        #expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
+        expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
+        expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') ),
+        expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
+        expand('results/fig/mm10/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('mm10') ),
+        expand('results/fig/hg38/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('hg38') ),
+        #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
 
 rule GeneID_GeneName_Synonym_dict:
     input:
@@ -104,8 +106,7 @@ checkpoint get_ChIP_experiments_TF_QC_filtered:
         python scripts/get_experimentList_TF.py --infile_chip {input.chip} --infile_tfs {input.tfs} --infile_gene_dict {input.gene_dict} --outfile {output} --genome {wildcards.genome} --th_reads {params.th_reads} --th_mapped_reads {params.th_mapped_reads} --th_duplicates {params.th_duplicates} --th_peaks {params.th_peaks} --th_exp_per_tf {params.th_exp_per_tf}
         """
 
-# Now download data: download_chip_data.sh -> check_tracks.py -> redownload_error_chip_data.sh
-
+# First download data: download_chip_data.sh -> check_tracks.py -> redownload_error_chip_data.sh
 rule make_tf_tensors:
     input:
         infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
@@ -126,10 +127,12 @@ rule svd:
         tensor='results/{genome}/TF_tensors/{tf}.hdf5'
     output:
         svd='results/{genome}/svd/{tf}.hdf5'
-    threads: 24
+    params:
+        size_factor=config['Normalization']['size_factor']
+    threads: 12
     shell:
         """
-        python scripts/get_Chip_svd.py --infile {input.tensor} --outfile {output.svd}
+        python scripts/get_Chip_svd.py --infile {input.tensor} --outfile {output.svd} --size_factor {params.size_factor}
         """
 
 rule plot_svd:
@@ -139,11 +142,35 @@ rule plot_svd:
         fig='results/fig/{genome}/svd/{tf}.pdf'
     shell:
         """
-        python scripts/plot_svd_per_tf.py --infile {input.svd} --outfig {output.fig}
+        python scripts/plot_svd_per_tf.py --infile {input.svd} --outfig {output.fig} 
+        """
+
+rule make_track_hubs:
+    input:
+        chip=expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
+        mm10=expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
+        hg38=expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') )
+    output:
+        expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
+    shell:
+        """
+        python scripts/make_track_hubs.py
+        """
+
+# run this rule only after downloading data with ./download_complex_data.sh
+rule get_tf_complex:
+    input:
+        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    output:
+        results="results/{genome}/TF_Complex.tsv"
+    params:
+        complexes = lambda wildcards: config['TF_Complex'][wildcards.genome]
+    shell:
+        """
+        python scripts/get_complex_proteins.py  --infile_complex {params.complexes} --infile_chip {input.chip} --outfile {output.results}
         """
 
 # rule Chip 1st comp. matrix:
 #   get_chip_1st_svd_matrix_plot_signal_distribution.py
 # rule multivariate_gaussian:
 #   Multivariate_gaussian_gene_factor.py
-

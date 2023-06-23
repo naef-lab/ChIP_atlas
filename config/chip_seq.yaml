@@ -12,6 +12,17 @@ Threshold:
   n_peaks: 10
   n_exp_per_tf: 250
 
+Normalization:
+  size_factor: 100000
+
+Track_hub:
+  outfolder: "track_hub"
+  outfiles:
+    - "hub.txt"
+    - "genomes.txt"
+    - "ChIP_Atlas.html"
+    - "url.txt"
+
 Ensembl:
   GeneID_GeneName_Synonyms:
     mm10: mm10_ENSID_Genename_synonyms.txt.gz
@@ -30,3 +41,6 @@ Promoterome:
   hg19: /bigdata/jbreda/genome/hg19/hg19_promoters_v2.gff.gz
   hg38: /bigdata/jbreda/genome/hg38/hg38_promoters_v1.gff.gz
 
+TF_Complex:
+  mm10: resources/complex/MusMusculus.tsv
+  hg38: resources/complex/HomoSapiens.tsv

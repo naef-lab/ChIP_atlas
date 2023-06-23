@@ -93,20 +93,21 @@ def plot_tf_correlation_matrix(X,genome):
 if __name__ == '__main__':
 
     genome = 'mm10'
+    genome = 'hg38'
     window = '2'
+    N_bin = 1
 
     # get promoterome
-    infile_promoterome=f'/home/jbreda/Promoterome/results/mm10/promoterome_pm{window}kb_filtered.bed'
+    infile_promoterome=f'/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window}kb_filtered.bed'
     promoterome = pd.read_csv(infile_promoterome,sep='\t')
 
     # Get all TFs
-    infile='resources/experimentList_mm10_TFs_only_QC_filtered.tab'
+    infile=f'resources/experimentList_{genome}_TFs_only_QC_filtered.tab'
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3],index_col=0)
     TFs = experiment_tf.antigen.unique()
 
     # get binned chip signal per tf per prom
     infile = f'results/{genome}/tensor_TFsvd1_posbin_prom.hdf5'
-    N_bin = 1
     with h5py.File(infile,'r') as hf:
         X = hf[str(N_bin)][:]
     # row: samples (prom_pos)
@@ -136,19 +137,20 @@ if __name__ == '__main__':
     if False:
         plot_tf_correlation_matrix(X,genome)
 
-    emp_cov = np.dot(X.T, X) / n_prom
-    emp_prec = linalg.inv(emp_cov)
-
     lw = LedoitWolf(assume_centered=True).fit(X)
     lw_cov = lw.covariance_
     lw_prec = lw.precision_
     print(lw.shrinkage_)
-
-    oas_cov,oas_shrinkage = oas(X,assume_centered=True)
-    oas_prec = linalg.inv(oas_cov)
-    print(oas_shrinkage)
-
+    
     if False:
+
+        emp_cov = np.dot(X.T, X) / n_prom
+        emp_prec = linalg.inv(emp_cov)
+
+        oas_cov,oas_shrinkage = oas(X,assume_centered=True)
+        oas_prec = linalg.inv(oas_cov)
+        print(oas_shrinkage)
+
         model = GraphicalLassoCV(assume_centered=True)
         model.fit(X)
         gl_cov = model.covariance_
@@ -158,15 +160,15 @@ if __name__ == '__main__':
             ("Empirical", emp_cov),
             ("Ledoit-Wolf", lw_cov),
             ("OAS", oas_cov),
-            #("GraphicalLassoCV", gl_cov),
+            ("GraphicalLassoCV", gl_cov),
             ]
         precs = [
             ("Empirical", emp_prec),
             ("Ledoit-Wolf", lw_prec),
             ("OAS", oas_prec),
-            #("GraphicalLasso", gl_prec),
+            ("GraphicalLasso", gl_prec),
         ]
-        outfig = f'results/fig/covariance_and_precision_{N_bin}.pdf'
+        outfig = f'results/fig/{genome}/covariance_and_precision_{N_bin}.pdf'
         plot_covariance_and_precision(covs,precs,outfig)
 
     my_cov  = lw_cov
@@ -205,21 +207,21 @@ if __name__ == '__main__':
                 idx_2 = idx_tf [ idx_tf != idx_1 ]
 
                 S_11 = my_cov[idx_1,idx_1]
-                S_12 = my_cov[np.ix_(idx_1,idx_2)]
-                S_21 = my_cov[np.ix_(idx_2,idx_1)]
-                S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
-                S_cond = S_11 - S_12 @ S_22_inv @ S_21
-                #L_11_inv = 1/my_prec[np.ix_(idx_1,idx_1)]
-                #L_12 = my_prec[np.ix_(idx_1,idx_2)]
-                #S_cond = L_11_inv
+                #S_12 = my_cov[np.ix_(idx_1,idx_2)]
+                #S_21 = my_cov[np.ix_(idx_2,idx_1)]
+                #S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
+                #S_cond = S_11 - S_12 @ S_22_inv @ S_21
+                L_11_inv = 1/my_prec[np.ix_(idx_1,idx_1)]
+                L_12 = my_prec[np.ix_(idx_1,idx_2)]
+                S_cond = L_11_inv
             
                 x_1 = X[np.ix_(gene_idx,idx_1)]
                 x_2 = X[np.ix_(gene_idx,idx_2)]
 
                 # mu_cond = mu_1 + S_12 @ S_22_inv @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
-                mu_cond =  S_12 @ S_22_inv @ x_2.T
+                # mu_cond =  S_12 @ S_22_inv @ x_2.T
                 # mu_cond = mu_1 - L_11_inv @ L_12 @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
-                # mu_cond = L_11_inv @ L_12 @ x_2
+                mu_cond = - L_11_inv @ L_12 @ x_2.T
 
                 for i,x_g1 in enumerate(x_1):
                     P['cond'][i,j] = multivariate_normal.cdf(x_g1, mean=mu_cond[0,i], cov=S_cond)
@@ -227,8 +229,8 @@ if __name__ == '__main__':
 
                 x_rnd_1 = X[np.ix_(rnd_idx,idx_1)]
                 x_rnd_2 = X[np.ix_(rnd_idx,idx_2)]
-                mu_cond = S_12 @ S_22_inv @ x_rnd_2.T
-                #mu_cond = L_11_inv @ L_12 @ x_rnd_2
+                #mu_cond = S_12 @ S_22_inv @ x_rnd_2.T
+                mu_cond = - L_11_inv @ L_12 @ x_rnd_2.T
 
                 for i,x_g1 in enumerate(x_rnd_1):
                     P['cond_rnd'][i,j] = multivariate_normal.cdf(x_g1, mean=mu_cond[0,i], cov=S_cond)
@@ -242,6 +244,8 @@ if __name__ == '__main__':
             TFs_out = {}
             y = np.linspace(0,1,201)
             y_tick = np.linspace(0,1,5)
+
+            MY_TFS = []
             
             for f,p in enumerate(P):
                 print(p)
@@ -272,6 +276,9 @@ if __name__ == '__main__':
                         ax.text(label_pos[i],y_pos,TFs[sort_idx][j],va='bottom',ha='center')
                     ax.plot([label_pos[i],tick_pos[i]] ,[y_pos,1],'k-',lw=.1)
 
+                if p == 'cond':
+                    MY_TFS.append(list(my_tfs))
+
                 # annotate low tfs
                 idx_tf = np.argmax(GK[p],0) < .2*len(y)
                 my_tfs = TFs[sort_idx][idx_tf]
@@ -291,7 +298,7 @@ if __name__ == '__main__':
                 plt.rcParams["axes.edgecolor"]=(1,1,1,0)
 
                 if p == 'cond':
-                    MY_TFS = my_tfs
+                    MY_TFS.append(list(my_tfs))
 
             fig.set_size_inches([30,20])
             plt.tight_layout()
@@ -299,55 +306,56 @@ if __name__ == '__main__':
             plt.close(fig)
 
 
-            fig, axes = plt.subplots(2,len(MY_TFS))
+            fig, axes = plt.subplots(4,max(len(MY_TFS[0]),len(MY_TFS[1])))
 
             idx_tf = np.arange(n_tf)
-            for t,tf in enumerate(MY_TFS):
-                idx_1 = np.where(tf==TFs)[0]
-                idx_2 = idx_tf [ idx_tf != idx_1 ]
+            for row in range(len(MY_TFS)):
+                for t,tf in enumerate(MY_TFS[row]):
+                    idx_1 = np.where(tf==TFs)[0]
+                    idx_2 = idx_tf [ idx_tf != idx_1 ]
 
-                S_11 = my_cov[idx_1,idx_1]
-                S_12 = my_cov[np.ix_(idx_1,idx_2)]
-                S_21 = my_cov[np.ix_(idx_2,idx_1)]
-                S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
-                S_cond = S_11 - S_12 @ S_22_inv @ S_21
+                    S_11 = my_cov[idx_1,idx_1]
+                    S_12 = my_cov[np.ix_(idx_1,idx_2)]
+                    S_21 = my_cov[np.ix_(idx_2,idx_1)]
+                    S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
+                    S_cond = S_11 - S_12 @ S_22_inv @ S_21
+                
+                    x_1 = X[np.ix_(gene_idx,idx_1)]
+                    x_2 = X[np.ix_(gene_idx,idx_2)]
+
+                    # mu_cond = mu_1 + S_12 @ S_22_inv @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
+                    mu_cond =  S_12 @ S_22_inv @ x_2.T
+
+                    # plot histogram of X[:,tf] and marginal distribution
+                    ax = axes[row*2,t]
+
+                    ax.hist(X[:,idx_1],50,density=True)
+                    ax.hist(X[gene_idx,idx_1],50,density=True)
+
+                    x = np.linspace( 1.1*X[:,idx_1].min(), 1.1*X[:,idx_1].max(),1000)
+
+                    p_x = multivariate_normal.pdf(x,mean=0,cov=S_11)
+                    ax.plot(x,p_x)
+                    ax.set_xlim(x[0],x[-1])
+                    ax.set_title(tf)
+
+                    # plot marginal distribution fo each gene
+                    ax = axes[2*row+1,t]
+
+                    P_cond = np.zeros([n_gene,len(x)])
+                    for g,x_g1 in enumerate(x_1):
+                        P_cond[g,:] = multivariate_normal.pdf(x, mean=mu_cond[0,g], cov=S_cond)
+
+                    ax.imshow(P_cond,origin='lower',extent=[x[0],x[-1],-.5,n_gene-.5],aspect='auto',interpolation='none')
+                    ax.plot(x_1,np.arange(n_gene),'r.')
+                    ax.set_yticks(range(n_gene))
+                    ax.set_yticklabels(promoterome.gene[gene_idx].values)
+                    ax.set_xlim(x[0],x[-1])
             
-                x_1 = X[np.ix_(gene_idx,idx_1)]
-                x_2 = X[np.ix_(gene_idx,idx_2)]
-
-                # mu_cond = mu_1 + S_12 @ S_22_inv @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
-                mu_cond =  S_12 @ S_22_inv @ x_2.T
-
-                # plot histogram of X[:,tf] and marginal distribution
-                ax = axes[0,t]
-                ax.hist(X[:,idx_1],50,density=True)
-                ax.hist(X[gene_idx,idx_1],50,density=True)
-
-                x = np.linspace( 1.1*X[:,idx_1].min(), 1.1*X[:,idx_1].max(),1000)
-
-                p_x = multivariate_normal.pdf(x,mean=0,cov=S_11)
-                ax.plot(x,p_x)
-                ax.set_xlim(x[0],x[-1])
-                ax.set_title(tf)
-
-                # plot marginal distribution fo each gene
-                ax = axes[1,t]
-
-                P_cond = np.zeros([n_gene,len(x)])
-                for g,x_g1 in enumerate(x_1):
-                    P_cond[g,:] = multivariate_normal.pdf(x, mean=mu_cond[0,g], cov=S_cond)
-
-                ax.imshow(P_cond,origin='lower',extent=[x[0],x[-1],-.5,n_gene-.5],aspect='auto',interpolation='none')
-                ax.plot(x_1,np.arange(n_gene),'r.')
-                ax.set_yticks(range(n_gene))
-                ax.set_yticklabels(promoterome.gene[gene_idx].values)
-                ax.set_xlim(x[0],x[-1])
-            
-            fig.set_size_inches([len(MY_TFS)*10,12])
+            fig.set_size_inches([max(len(MY_TFS[0]),len(MY_TFS[1]))*10,4*6])
             plt.tight_layout()
             fig.savefig(f'results/fig/{genome}/Conditional_multivariate_marginal_{gene_subset}_{N_bin}_outlier_TFs.pdf')
             plt.close(fig)
-
 
 
 
