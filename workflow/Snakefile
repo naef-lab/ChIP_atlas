@@ -50,7 +50,7 @@ rule all:
     input:
         "results/fig/hist_experiment_QC.pdf",
         #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
-        expand('results/mm10/TF_tensors/{tf}.hdf5', tf=get_tfs('mm10') ),
+        expand('results/mm10/TF_tensors//{tf}.hdf5', tf=get_tfs('mm10') ),
         #expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
         #expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
         #expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') ),

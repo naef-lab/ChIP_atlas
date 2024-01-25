@@ -2,8 +2,10 @@ Genome:
   - mm10
   - hg38
 
-Window_kb: 2
-bin_size: 20
+Window_kb:
+  - 5
+bin_size:
+  - 10
 
 Threshold:
   n_reads: 1000
