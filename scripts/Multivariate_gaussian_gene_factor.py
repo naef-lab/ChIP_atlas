@@ -93,7 +93,7 @@ def plot_tf_correlation_matrix(X,genome):
 if __name__ == '__main__':
 
     genome = 'mm10'
-    genome = 'hg38'
+    #genome = 'hg38'
     window = '2'
     N_bin = 1
 

@@ -61,7 +61,6 @@ if __name__ == '__main__':
 
     # load promoters
     promoter = pd.read_csv(infile_promoter ,sep='\t')
-    promoter.chr = promoter.chr.apply(lambda x: 'chr'+x)
                            
     # get tensor dimention and initialize
     N_prom = promoter.shape[0]

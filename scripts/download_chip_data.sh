@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # filter metadata
-
 # mm10
 # cat experimentList.tab | awk '($2=="mm10") && ($3=="TFs") {print $0}' | \
 #     grep -v "Epitope tags" | \
@@ -15,7 +14,6 @@
 #     grep -v "5-hmC" | \
 #     grep -v "5-mC" | \
 #     grep -v "ADP-ribose" > experimentList_mm10_TFs.tab
-
 # hg38
 # cat experimentList.tab | awk '($2=="hg38") && ($3=="TFs") {print $0}' | \
 #     grep -v "Pan-acetyllysine" | \
@@ -28,7 +26,6 @@
 #     grep -v "8-Hydroxydeoxyguanosine" | \
 #     grep -v "5-hmC" | \
 #     grep -v "5-mC" > experimentList_hg38_TFs.tab
-
 # hg19
 # cat experimentList.tab | awk '($2=="hg19") && ($3=="TFs") {print $0}' | \
 #     grep -v "Pan-acetyllysine" | \

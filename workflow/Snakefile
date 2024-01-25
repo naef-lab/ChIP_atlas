@@ -15,17 +15,23 @@ configfile: 'config/chip_seq.yaml'
         #TF_EXPERIMENT[genome][tf] = list(TF_EXPERIMENT[genome][tf])
 
 def get_chip_table(genome):
-    #infile = checkpoints.get_ChIP_experiments_TF_QC_filtered.get(**wildcards).output[0]
     infile=f"resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
 
     return experiment_tf
 
-def get_experiments(wildcards):
+def get_experiments_bw(wildcards):
     experiment_tf = get_chip_table(wildcards.genome)
     IDs = list(experiment_tf.loc[experiment_tf.antigen==wildcards.tf,'id'])
     files = [f"resources/tracks/{wildcards.genome}/{id}.bw" for id in IDs]
+
+    return files
+
+def get_experiments_bb(wildcards):
+    experiment_tf = get_chip_table(wildcards.genome)
+    IDs = list(experiment_tf.loc[experiment_tf.antigen==wildcards.tf,'id'])
+    files = [f"resources/tracks/{wildcards.genome}/{id}.05.bb" for id in IDs]
 
     return files
 
@@ -44,15 +50,25 @@ rule all:
     input:
         "results/fig/hist_experiment_QC.pdf",
         #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
-        #expand('results/mm10/TF_tensors/{tf}.hdf5', tf=get_tfs('mm10') ),
+        expand('results/mm10/TF_tensors/{tf}.hdf5', tf=get_tfs('mm10') ),
         #expand('results/hg38/TF_tensors/{tf}.hdf5', tf=get_tfs('hg38') ),
-        expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
-        expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') ),
-        expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
-        expand('results/fig/mm10/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('mm10') ),
-        expand('results/fig/hg38/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('hg38') ),
+        #expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
+        #expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') ),
+        #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
+        #expand('results/fig/mm10/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('mm10') ),
+        #expand('results/fig/hg38/svd/{tf}.pdf', tf=get_tfs_st_exp_gt1('hg38') ),
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
+        #expand('results/{genome}/tensor_TFsvd1_posbin_prom.hdf5',genome=['mm10','hg38']),
+        #expand('results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf',genome=['mm10','hg38'])
+        #expand('results/mm10/TF_bedfiles/{tf}.bed', tf=get_tfs('mm10') ),
+        #expand('results/hg38/TF_bedfiles/{tf}.bed', tf=get_tfs('hg38') ),
+        #expand('results/mm10/TF_prom_bedfiles/{tf}.bed', tf=get_tfs('mm10') ),
+        #expand('results/hg38/TF_prom_bedfiles/{tf}.bed', tf=get_tfs('hg38') )
 
+
+
+
+# Make GeneID to GeneName dictionary
 rule GeneID_GeneName_Synonym_dict:
     input:
         "/bigdata/jbreda/genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
@@ -73,6 +89,7 @@ rule get_mm10_TF_list:
         cp {output} /bigdata/jbreda/genome/mm39_TF_list.csv
         """
 
+# Plot all QC stats for all genomes
 rule plot_chip_experiments_stats_QC:
     input:
         chip="resources/experimentList.tab"
@@ -88,6 +105,7 @@ rule plot_chip_experiments_stats_QC:
     shell:
         "python scripts/plot_chip_atlas_stats.py --infile {input.chip} --outfig_antigen_class_per_genome {output.antigen_class_per_genome} --outfig_QC {output.QC} --genomes {params.genomes}  --th_reads {params.th_reads} --th_mapped_reads {params.th_mapped_reads} --th_duplicates {params.th_duplicates} --th_peaks {params.th_peaks}"
 
+# Fliter experiment list based on QC thresholds
 checkpoint get_ChIP_experiments_TF_QC_filtered:
     input:
         chip="resources/experimentList.tab",
@@ -110,9 +128,9 @@ checkpoint get_ChIP_experiments_TF_QC_filtered:
 rule make_tf_tensors:
     input:
         infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
-        exp_list=get_experiments
+        exp_list=get_experiments_bw
     output:
-        tensor='results/{genome}/TF_tensors/{tf}.hdf5'
+        tensor='results/{genome}/TF_tensors/Window_pm_{window_kb}_bin_size_{bin_size}/{tf}.hdf5'
     params:
         window_kb=config['Window_kb'],
         bin_size=config['bin_size']
@@ -171,6 +189,57 @@ rule get_tf_complex:
         """
 
 # rule Chip 1st comp. matrix:
-#   get_chip_1st_svd_matrix_plot_signal_distribution.py
+rule get_chip_1st_comp:
+    input:
+        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{{genome}}/promoterome_pm{win}kb_filtered.bed".format(win = config['Window_kb'])
+    output:
+        file_tf_binnedPos_prom='results/{genome}/tensor_TFsvd1_tf_binnedpos_prom.hdf5',
+        file_tf_pos_prom='results/{genome}/tensor_TFsvd1_tf_pos_prom.npy',
+        fig='results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf'
+    params:
+        window_kb = config['Window_kb']
+    threads: 12
+    shell:
+        """
+        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_chip {input.chip} --infile_promoterome {input.promoterome} --outfile_tf_binnedpos_prom {output.file_tf_binnedPos_prom} --outfile_tf_pos_prom {output.file_tf_pos_prom} --outfig {output.fig} --genome {wildcards.genome} --window_kb {params.window_kb}
+        """
+        
 # rule multivariate_gaussian:
 #   Multivariate_gaussian_gene_factor.py
+
+
+# Chip peaks rules:
+
+rule merge_peaks_per_tf:
+    input:
+        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    output:
+        bedfile='results/{genome}/TF_bedfiles/{tf}.bed'
+    threads: 4
+    shell:
+        """
+        scripts/merge_tf_bigbeds.sh {wildcards.genome} {wildcards.tf} {input.infile} {output.bedfile}
+        """
+
+rule intersect_peaks_with_promoterome:
+    input:
+        bedfile='results/{genome}/TF_bedfiles/{tf}.bed',
+        promoterome="/home/jbreda/Promoterome/results/{{genome}}/promoterome_pm{win}kb_filtered.bed".format(win = config['Window_kb'])
+    output:
+        bedfile='results/{genome}/TF_prom_bedfiles/{tf}.bed'
+    shell:
+        """
+        bedtools intersect -a {input.bedfile} -b <(tail -n+2 {input.promoterome}) | bedtools sort | uniq > {output.bedfile}
+        """
+
+rule get_nr_of_peaks_per_prom:
+    input:
+        promoterome="/home/jbreda/Promoterome/results/{{genome}}/promoterome_pm{win}kb_filtered.bed".format(win = config['Window_kb']),
+        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    output:
+        file='results/{genome}/nr_peaks_per_prom_per_tf.tsv'
+    shell:
+        """
+        scripts/get_nr_of_peaks_per_prom_per_tf.sh {input.promoterome} {input.chip} {output.file}
+        """

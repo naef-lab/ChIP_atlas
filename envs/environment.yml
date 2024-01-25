@@ -1,0 +1,15 @@
+name: chip-seq
+channels:
+    - bioconda
+    - conda-forge
+    - defaults
+dependencies:
+    - snakemake
+    - fastqc
+    - bedtools
+    - python
+    - ipython
+    - numpy
+    - scipy
+    - matplotlib
+    - pandas

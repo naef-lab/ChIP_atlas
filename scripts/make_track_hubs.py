@@ -25,7 +25,7 @@ if __name__ == '__main__':
         for genome in Genomes:
             fout.write(f"genome {genome}\n")
             fout.write(f"trackDb {genome}/trackDb.txt\n")
-        fout.write("\n")
+            fout.write("\n")
 
     # make ChIP_Atlas.html
     outfile=f'{outfolder}/ChIP_Atlas.html'
@@ -35,7 +35,7 @@ if __name__ == '__main__':
     # make url.txt
     outfile=f'{outfolder}/url.txt'
     with open(outfile,'w', encoding="utf-8") as fout:
-        fout.write("http://upnaesrv1.epfl.ch/ChIP_Atlas/hub.txt")
+        fout.write("http://upnaesrv1.epfl.ch/ChIP_Atlas/hub.txt\n")
 
     # make trackDb.txt
     for genome in Genomes:
