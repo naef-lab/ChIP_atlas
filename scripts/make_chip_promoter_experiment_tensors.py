@@ -57,7 +57,7 @@ def fill_experiment(exp,promoter,N_pos):
 if __name__ == '__main__':
 
     args = parse_argument()
-    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed"
+    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed" 
 
     # load promoters
     promoter = pd.read_csv(infile_promoter ,sep='\t')
@@ -85,7 +85,13 @@ if __name__ == '__main__':
 
     # write tensor in out h5py file after removing failed expeiment
     with h5py.File(args.outfile,'w') as hf:
-        hf.create_dataset('chip_prom_pos_exp',data=X)
-        hf.create_dataset('experiment_id',data=exp_id)
-        if len(failed_bw)>0:
-            hf.create_dataset('failed_experiment',data=failed_bw)
+        d = hf.create_dataset('chip_prom_pos_exp',data=X)
+        d.attrs['exp_id'] = ','.join(IDs)
+        d.attrs['failed_bw'] = ','.join(failed_bw)
+        d.attrs['TF'] = args.tf
+        d.attrs['genome'] = args.genome
+        d.attrs['window_kb'] = args.window_kb
+        d.attrs['bin_size'] = args.bin_size
+        d.attrs['promoterome'] = infile_promoter
+        
+        

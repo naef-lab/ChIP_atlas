@@ -19,6 +19,13 @@
         "time" : "06:00:00",
         "cpus-per-task" : 4,
         "mem" : "100G"
-    }
+    },
 
+    "make_chip_tensors" :
+    {
+        "name" : "chip_tensors",
+        "time" : "24:00:00",
+        "cpus-per-task" : 12,
+        "mem" : "80G"
+    }
 }

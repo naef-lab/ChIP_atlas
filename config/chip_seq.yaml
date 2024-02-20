@@ -4,7 +4,7 @@ Genome:
 
 Window_kb:
   - 5
-bin_size:
+Bin_size:
   - 10
 
 Threshold:
