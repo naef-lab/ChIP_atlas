@@ -92,8 +92,8 @@ def plot_tf_correlation_matrix(X,genome):
 
 if __name__ == '__main__':
 
-    genome = 'mm10'
-    #genome = 'hg38'
+    #genome = 'mm10'
+    genome = 'hg38'
     window = '2'
     N_bin = 1
 
@@ -107,7 +107,8 @@ if __name__ == '__main__':
     TFs = experiment_tf.antigen.unique()
 
     # get binned chip signal per tf per prom
-    infile = f'results/{genome}/tensor_TFsvd1_posbin_prom.hdf5'
+    infile = f'results/{genome}/tensor_TFsvd1_tf_binnedpos_prom.hdf5'
+
     with h5py.File(infile,'r') as hf:
         X = hf[str(N_bin)][:]
     # row: samples (prom_pos)
@@ -174,8 +175,9 @@ if __name__ == '__main__':
     my_cov  = lw_cov
     my_prec = lw_prec
 
-    Gene_subset = ['aminoacyl_tRNA_synthetase','ribosomal_protein_genes','core_circadian_clock_genes']
-    #Gene_subset = ['core_circadian_clock_genes']
+    Gene_subset = ['aminoacyl_tRNA_synthetase','ribosomal_protein_genes','core_circadian_clock_genes','cytochrome_P450_CYP_superfamily']
+    Gene_subset = ['cytochrome_P450_CYP_superfamily']
+    Gene_subset = ['Stat5']
 
     # 1D conditional multivariate gaussian
     if True:
@@ -251,7 +253,10 @@ if __name__ == '__main__':
                 print(p)
                 GK[p] = np.zeros([y.shape[0],n_tf])
                 for tf in range(n_tf):
-                    GK[p][:,tf] = gaussian_kde(P[p][:,tf])(y)
+                    x = P[p][:,tf]
+                    if len(np.unique(x)) == 1:
+                        x += np.random.normal(0,0.01*np.unique(x),len(x))
+                    GK[p][:,tf] = gaussian_kde(x)(y)
 
                 GK[p] = GK[p]/GK[p].max(0)
                 sort_idx = np.argsort(np.argmax(GK[p],0))
@@ -264,7 +269,10 @@ if __name__ == '__main__':
                 ax.set_xticks([])
 
                 # annotate high tfs
-                idx_tf = np.argmax(GK[p],0) > .8*len(y)
+                idx_tf = np.argmax(GK[p],0) > .95*len(y)
+                if len(idx_tf) == 0:
+                    continue
+
                 my_tfs = TFs[sort_idx][idx_tf]
                 tick_pos = np.arange(n_tf)[idx_tf]
                 label_pos = np.linspace(0,n_tf-1,sum(idx_tf))
