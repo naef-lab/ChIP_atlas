@@ -1,11 +1,10 @@
 name: chip
 channels:
     - conda-forge
+    - bioconda
     - defaults
 dependencies:
-    - fastqc
-    - bedtools
-    - python
+    - snakemake
     - ipython
     - numpy
     - scipy
@@ -13,3 +12,5 @@ dependencies:
     - pandas
     - pybigwig
     - h5py
+    - fastqc
+    - bedtools
