@@ -64,8 +64,8 @@ if __name__ == '__main__':
                            
     # get tensor dimention and initialize
     N_prom = promoter.shape[0]
-    win = int(args.window_kb*1000)
-    N_pos = int(win/args.bin_size)
+    win_size = promoter.at[0,'end'] - promoter.at[0,'start']
+    N_pos = int(win_size/args.bin_size)
     N_exp = len(args.infiles_tf)
 
     # fill tensor
