@@ -1,0 +1,15 @@
+#jobs: 100
+cluster:
+    mkdir -p logs/{rule} &&
+    sbatch
+    --ntasks 1
+    --cpus-per-task {resources.threads}
+    --mem {resources.mem_mb}
+    --time {resources.time}
+    --output log/jobs/{rule}_{wildcards}_%j.out
+    --error log/jobs/{rule}_{wildcards}_%j.err
+default-resources:
+    - threads=1
+    - mem_mb=6000
+    - time="12:00:00"
+    - qos=serial

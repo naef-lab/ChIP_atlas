@@ -1,6 +1,7 @@
 resources
 results
 .snakemake/
-stdout/
-stderr/
+log/
 tmp/
+stderr/
+stdout/

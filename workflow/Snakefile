@@ -51,13 +51,13 @@ rule all:
         #"results/fig/hist_experiment_QC.pdf",
         #expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
         #
-        #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/E2f1.hdf5', window_kb=config['Window_kb']),
+        #expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/ZUFSP.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
-        expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
+        #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
         expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38') ),
-        expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
+        #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
         expand('results/hg38/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
+        #
         #expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
         #expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') ),
         #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
@@ -70,8 +70,6 @@ rule all:
         #expand('results/hg38/TF_bedfiles/{tf}.bed', tf=get_tfs('hg38') ),
         #expand('results/mm10/TF_prom_bedfiles/{tf}.bed', tf=get_tfs('mm10') ),
         #expand('results/hg38/TF_prom_bedfiles/{tf}.bed', tf=get_tfs('hg38') )
-
-
 
 
 # Make GeneID to GeneName dictionary
@@ -138,7 +136,7 @@ rule make_chip_tensors:
         exp_list=get_experiments_bw
     output:
         tensor='results/{genome}/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5'
-    threads: 12
+    threads: 20
     shell:
         """
         python scripts/make_chip_promoter_experiment_tensors.py --threads {threads} --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {wildcards.window_kb} --bin_size {wildcards.bin_size} --outfile {output.tensor} --infiles_tf {input.exp_list}

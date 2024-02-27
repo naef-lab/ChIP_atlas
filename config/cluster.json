@@ -17,15 +17,23 @@
     {
         "name" : "svd",
         "time" : "06:00:00",
-        "cpus-per-task" : 4,
+        "cpus-per-task" : 12,
         "mem" : "100G"
     },
 
     "make_chip_tensors" :
     {
         "name" : "chip_tensors",
-        "time" : "24:00:00",
-        "cpus-per-task" : 12,
-        "mem" : "80G"
+        "time" : "48:00:00",
+        "cpus-per-task" : 20,
+        "mem" : "256G"
+    },
+
+    "make_peak_tensors" :
+    {
+        "name" : "peak_tensors",
+        "time" : "48:00:00",
+        "cpus-per-task" : 1,
+        "mem" : "60G"
     }
 }

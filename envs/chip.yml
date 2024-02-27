@@ -1,10 +1,8 @@
-name: chip-seq
+name: chip
 channels:
-    - bioconda
     - conda-forge
     - defaults
 dependencies:
-    - snakemake
     - fastqc
     - bedtools
     - python
@@ -13,3 +11,5 @@ dependencies:
     - scipy
     - matplotlib
     - pandas
+    - pybigwig
+    - h5py

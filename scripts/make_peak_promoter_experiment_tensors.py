@@ -3,8 +3,6 @@ import pandas as pd
 import argparse
 import pyBigWig
 import h5py
-import multiprocessing
-from functools import partial
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Save ChIP Peaks for tf in tensor (N_promoters x N_positions X N_experiments).')
@@ -43,7 +41,7 @@ if __name__ == '__main__':
     args = parse_argument()
 
     # load promoters
-    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed" 
+    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed"
     promoterome = pd.read_csv(infile_promoter ,sep='\t')
     CHR = promoterome.chr.unique()
 
@@ -53,11 +51,12 @@ if __name__ == '__main__':
         bb = pyBigWig.open(infile)
         id = infile.split('/')[-1].split('.')[0]
         for chr in CHR:
-            p = bb.entries(chr,0,bb.chroms(chr))
-            p = pd.DataFrame(p,columns=['start','end','score'])
-            p['chr'] = chr
-            p['exp_id'] = id
-            peaks_table = pd.concat([peaks_table,p],axis=0)
+            if chr in bb.chroms():
+                p = bb.entries(chr,0,bb.chroms(chr))
+                p = pd.DataFrame(p,columns=['start','end','score'])
+                p['chr'] = chr
+                p['exp_id'] = id
+                peaks_table = pd.concat([peaks_table,p],axis=0)
     peaks_table = peaks_table.reset_index(drop=True)
 
     # get tensor dimension and initialize
