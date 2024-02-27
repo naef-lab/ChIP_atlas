@@ -1,7 +1,5 @@
 resources
 results
-resources/
-results/
 .snakemake/
 log/
 tmp/
