@@ -153,6 +153,18 @@ rule make_peak_tensors:
         python scripts/make_peak_promoter_experiment_tensors.py --tf {wildcards.tf} --genome {wildcards.genome} --window_kb {wildcards.window_kb} --outfile {output.tensor} --infiles_tf {input.exp_list}
         """
 
+rule make_peak_table:
+    input:
+        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
+    output:
+        table='results/{genome}/peak_table_pm{window_kb}kb.txt
+    params:
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
+    shell:
+        """
+        python scripts/make_peak_tables.py --genome {wildcards.genome} --promoterome {params.promoterome} --out_file {output.table}
+        """
+
 rule svd:
     input:
         tensor='results/{genome}/Chip_tensors/{tf}.hdf5'
