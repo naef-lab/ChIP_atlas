@@ -92,8 +92,8 @@ def plot_tf_correlation_matrix(X,genome):
 
 if __name__ == '__main__':
 
-    #genome = 'mm10'
-    genome = 'hg38'
+    genome = 'mm10'
+    #genome = 'hg38'
     window = '2'
     N_bin = 1
 
@@ -179,12 +179,15 @@ if __name__ == '__main__':
     Gene_subset = ['cytochrome_P450_CYP_superfamily']
     Gene_subset = ['Stat5']
 
+    Gene_subset = [f'Genes_model_{m}_BICW_gt_{th}_phase_{p}_pm_2' for m in [2,3,5] for th in [0.5,0.8,0.9] for p in np.arange(0,24,2)]
+
+
     # 1D conditional multivariate gaussian
     if True:
         for gene_subset in Gene_subset:
             print(gene_subset)
             
-            genes = pd.read_csv(f'resources/{gene_subset}.txt',sep='\t')
+            genes = pd.read_csv(f'resources/Gene_subsets/{gene_subset}.txt',sep='\t')
             
             gene_idx = np.array([]).astype(int)
             for g in genes[genome].values:
@@ -269,7 +272,7 @@ if __name__ == '__main__':
                 ax.set_xticks([])
 
                 # annotate high tfs
-                idx_tf = np.argmax(GK[p],0) > .95*len(y)
+                idx_tf = np.argmax(GK[p],0) > .8*len(y)
                 if len(idx_tf) == 0:
                     continue
 
@@ -313,57 +316,57 @@ if __name__ == '__main__':
             fig.savefig(f'results/fig/{genome}/Conditional_multivariate_marginal_{gene_subset}_{N_bin}.pdf')
             plt.close(fig)
 
+            if len(MY_TFS[0])>0 | len(MY_TFS[1])>0:
+                fig, axes = plt.subplots(4,max(len(MY_TFS[0]),len(MY_TFS[1])))
 
-            fig, axes = plt.subplots(4,max(len(MY_TFS[0]),len(MY_TFS[1])))
+                idx_tf = np.arange(n_tf)
+                for row in range(len(MY_TFS)):
+                    for t,tf in enumerate(MY_TFS[row]):
+                        idx_1 = np.where(tf==TFs)[0]
+                        idx_2 = idx_tf [ idx_tf != idx_1 ]
 
-            idx_tf = np.arange(n_tf)
-            for row in range(len(MY_TFS)):
-                for t,tf in enumerate(MY_TFS[row]):
-                    idx_1 = np.where(tf==TFs)[0]
-                    idx_2 = idx_tf [ idx_tf != idx_1 ]
+                        S_11 = my_cov[idx_1,idx_1]
+                        S_12 = my_cov[np.ix_(idx_1,idx_2)]
+                        S_21 = my_cov[np.ix_(idx_2,idx_1)]
+                        S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
+                        S_cond = S_11 - S_12 @ S_22_inv @ S_21
+                    
+                        x_1 = X[np.ix_(gene_idx,idx_1)]
+                        x_2 = X[np.ix_(gene_idx,idx_2)]
 
-                    S_11 = my_cov[idx_1,idx_1]
-                    S_12 = my_cov[np.ix_(idx_1,idx_2)]
-                    S_21 = my_cov[np.ix_(idx_2,idx_1)]
-                    S_22_inv = linalg.inv( my_cov[np.ix_(idx_2,idx_2)] )
-                    S_cond = S_11 - S_12 @ S_22_inv @ S_21
+                        # mu_cond = mu_1 + S_12 @ S_22_inv @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
+                        mu_cond =  S_12 @ S_22_inv @ x_2.T
+
+                        # plot histogram of X[:,tf] and marginal distribution
+                        ax = axes[row*2,t]
+
+                        ax.hist(X[:,idx_1],50,density=True)
+                        ax.hist(X[gene_idx,idx_1],50,density=True)
+
+                        x = np.linspace( 1.1*X[:,idx_1].min(), 1.1*X[:,idx_1].max(),1000)
+
+                        p_x = multivariate_normal.pdf(x,mean=0,cov=S_11)
+                        ax.plot(x,p_x)
+                        ax.set_xlim(x[0],x[-1])
+                        ax.set_title(tf)
+
+                        # plot marginal distribution fo each gene
+                        ax = axes[2*row+1,t]
+
+                        P_cond = np.zeros([n_gene,len(x)])
+                        for g,x_g1 in enumerate(x_1):
+                            P_cond[g,:] = multivariate_normal.pdf(x, mean=mu_cond[0,g], cov=S_cond)
+
+                        ax.imshow(P_cond,origin='lower',extent=[x[0],x[-1],-.5,n_gene-.5],aspect='auto',interpolation='none')
+                        ax.plot(x_1,np.arange(n_gene),'r.')
+                        ax.set_yticks(range(n_gene))
+                        ax.set_yticklabels(promoterome.gene[gene_idx].values)
+                        ax.set_xlim(x[0],x[-1])
                 
-                    x_1 = X[np.ix_(gene_idx,idx_1)]
-                    x_2 = X[np.ix_(gene_idx,idx_2)]
-
-                    # mu_cond = mu_1 + S_12 @ S_22_inv @ (x_2 - mu_2) with mu_1 = mu_2 = 0 :
-                    mu_cond =  S_12 @ S_22_inv @ x_2.T
-
-                    # plot histogram of X[:,tf] and marginal distribution
-                    ax = axes[row*2,t]
-
-                    ax.hist(X[:,idx_1],50,density=True)
-                    ax.hist(X[gene_idx,idx_1],50,density=True)
-
-                    x = np.linspace( 1.1*X[:,idx_1].min(), 1.1*X[:,idx_1].max(),1000)
-
-                    p_x = multivariate_normal.pdf(x,mean=0,cov=S_11)
-                    ax.plot(x,p_x)
-                    ax.set_xlim(x[0],x[-1])
-                    ax.set_title(tf)
-
-                    # plot marginal distribution fo each gene
-                    ax = axes[2*row+1,t]
-
-                    P_cond = np.zeros([n_gene,len(x)])
-                    for g,x_g1 in enumerate(x_1):
-                        P_cond[g,:] = multivariate_normal.pdf(x, mean=mu_cond[0,g], cov=S_cond)
-
-                    ax.imshow(P_cond,origin='lower',extent=[x[0],x[-1],-.5,n_gene-.5],aspect='auto',interpolation='none')
-                    ax.plot(x_1,np.arange(n_gene),'r.')
-                    ax.set_yticks(range(n_gene))
-                    ax.set_yticklabels(promoterome.gene[gene_idx].values)
-                    ax.set_xlim(x[0],x[-1])
-            
-            fig.set_size_inches([max(len(MY_TFS[0]),len(MY_TFS[1]))*10,4*6])
-            plt.tight_layout()
-            fig.savefig(f'results/fig/{genome}/Conditional_multivariate_marginal_{gene_subset}_{N_bin}_outlier_TFs.pdf')
-            plt.close(fig)
+                fig.set_size_inches([max(len(MY_TFS[0]),len(MY_TFS[1]))*10,4*6])
+                plt.tight_layout()
+                fig.savefig(f'results/fig/{genome}/Conditional_multivariate_marginal_{gene_subset}_{N_bin}_outlier_TFs.pdf')
+                plt.close(fig)
 
 
 
