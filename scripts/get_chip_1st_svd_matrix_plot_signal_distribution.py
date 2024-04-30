@@ -19,10 +19,6 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="hdf5 with SVD 1st comp. tensor per TF, pos, prom")
-    parser.add_argument('--outfile_tf_binnedpos_prom'
-        ,required=True
-        ,type=str
-        ,help="hdf5 with SVD 1st comp. tensor")
     parser.add_argument('--outfig'
         ,required=True
         ,type=str

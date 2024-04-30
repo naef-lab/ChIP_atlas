@@ -1,6 +1,6 @@
 #!/bin/bash
 snakemake -s workflow/Snakefile \
-          -j 999 \
+          -j 500 \
           --cluster-config config/cluster.json \
           --cluster "sbatch --job-name {rule} \
                             --qos {cluster.qos} \
@@ -10,4 +10,4 @@ snakemake -s workflow/Snakefile \
                             --ntasks {cluster.ntasks} \
                             --cpus-per-task {cluster.cpus-per-task} \
                             --output {cluster.stdout} \
-                            --error {cluster.stderr}"
+                            --error {cluster.stderr}" -n
