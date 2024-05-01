@@ -39,8 +39,9 @@
 #     grep -v "5-hmC" | \
 #     grep -v "5-mC" > experimentList_hg19_TFs.tab
 
-Genome=hg38
-metadata="resources/experimentList_${Genome}_TFs_only_QC_filtered.tab"
+Genome=$1
+#metadata="resources/experimentList_${Genome}_TFs_only_QC_filtered.tab"
+metadata=$2
 
 mapfile -t EXPERIMENT_ID  < <(cut -f1 "$metadata")
 Threshold=05
@@ -48,6 +49,7 @@ Threshold=05
 # get files
 for Experimental_ID in "${EXPERIMENT_ID[@]}"
 do
+    echo 
     outfile="resources/tracks/${Genome}/${Experimental_ID}.bw"
     if ! [ -e "$outfile" ]
     then
@@ -66,3 +68,4 @@ do
         wget https://chip-atlas.dbcls.jp/data/${Genome}/eachData/bb${Threshold}/${Experimental_ID}.${Threshold}.bb -O "$outfile"
     fi
 done
+# Or rsync between servers

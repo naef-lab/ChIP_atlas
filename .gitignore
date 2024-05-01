@@ -1,5 +1,6 @@
 resources
 results
+genome
 .snakemake/
 log/
 tmp/

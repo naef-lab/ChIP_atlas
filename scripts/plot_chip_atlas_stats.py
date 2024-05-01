@@ -23,6 +23,10 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="Output figure pdf")
+    parser.add_argument('--outfig_peaks_per_unique_mapped_reads'
+        ,required=True
+        ,type=str
+        ,help="Output figure pdf")
     parser.add_argument('--th_reads'
         ,default=1000
         ,type=int)
@@ -112,6 +116,11 @@ if __name__ == '__main__':
         
         ax = fig.add_subplot(rows,cols,i+1)
         x = [ chip.loc[chip.genome == genome,col].values for genome in Genome ]
+        if col==r'$log_{10}$ nr. of peaks + 1':
+            for j in range(len(x)):
+                x[j] = np.array(x[j])
+                x[j][x[j]==0] = -1
+                x[j] = list(x[j])
 
         ax.hist(x,bins=20,label=Genome)
         ylim = ax.get_ylim()
@@ -148,7 +157,7 @@ if __name__ == '__main__':
 
     fig.set_size_inches([cols*6,rows*4])
     plt.tight_layout()
-    fig.savefig("results/fig/hist_peaks_per_unique_mapped_read.pdf")
+    fig.savefig(args.outfig_peaks_per_unique_mapped_reads)
 
 
     fig = plt.figure()

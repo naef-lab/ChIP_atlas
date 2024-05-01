@@ -9,13 +9,10 @@ Bin_size:
 
 Threshold:
   n_reads: 1000
-  f_mapped_reads: 0.5
-  f_duplicates: 0.5
-  n_peaks: 10
-  n_exp_per_tf: 250
-
-Normalization:
-  size_factor: 100000
+  f_mapped_reads: 0.1
+  f_duplicates: .95
+  n_peaks: 1
+  n_exp_per_tf: 128
 
 Track_hub:
   outfolder: "track_hub"

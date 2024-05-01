@@ -58,13 +58,20 @@ if __name__ == '__main__':
     chip.loc[:,'n_peaks_per_unique_mapped_reads'] = chip.n_peaks/(chip.f_mapped*chip.n_reads*(1-chip.f_duplicates))
 
     n_tot = chip.shape[0]
+    print(f'{args.genome}: {n_tot} experiments')
 
     # apply thresholds
-    chip = chip[(chip['n_reads']     > args.th_reads) & 
-                (chip['f_mapped']    > args.th_mapped_reads) &
-                (chip['f_duplicates']< args.th_duplicates) &
-                (chip['n_peaks']     > args.th_peaks) ]
+    idx_out = list( chip[(chip['n_reads']     < args.th_reads) | 
+                         (chip['f_mapped']    < args.th_mapped_reads) |
+                         (chip['f_duplicates']> args.th_duplicates) |
+                         (chip['n_peaks']     < args.th_peaks) ].index )
     
+    # For TFs with more than th experiments, keep the th with the highest n_peaks_per_unique_mapped_reads
+    exp_per_tf = chip.groupby('antigen')['antigen'].aggregate('count')
+    for tf in exp_per_tf.loc[exp_per_tf > args.th_exp_per_tf].index:
+        idx_out.extend( list( chip.loc[chip.antigen==tf].sort_values('n_peaks_per_unique_mapped_reads',ascending=False).index[args.th_exp_per_tf:] ) )
+    chip.drop(idx_out,inplace=True)
+
     print(f'{args.genome}: {chip.shape[0]/n_tot} passed QC')
 
     # get TF list
@@ -100,7 +107,7 @@ if __name__ == '__main__':
         # if antigen is a synonym of 
         elif antigen in Gene_id_name_syn['Gene Synonym'].values:
             gene_name = Gene_id_name_syn.loc[ Gene_id_name_syn['Gene Synonym']==antigen, 'Gene name'].values
-            if gene_name in TFs.GeneName.values:
+            if any([g in TFs.GeneName.values for g in gene_name]):
                 tf_id.append(id)
 
     # print kept ratio
