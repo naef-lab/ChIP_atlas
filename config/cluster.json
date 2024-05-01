@@ -35,5 +35,13 @@
         "time" : "02:00:00",
         "cpus-per-task" : 12,
         "mem" : "120G"
+    },
+
+    "get_chip_1st_comp" :
+    {
+        "name" : "chip_1st_comp",
+        "time" : "24:00:00",
+        "cpus-per-task" : 12,
+        "mem" : "80G"
     }
 }

@@ -46,6 +46,18 @@ def get_tfs_st_exp_gt1(genome):
 
     return list(experiment_tf.loc[experiment_tf.N>1,:].antigen.unique())
 
+def get_all_svd_files(wildcards):
+    TFs = get_tfs(wildcards.genome)
+    svd_files = [f"results/{wildcards.genome}/svd/Window_pm{wildcards.window_kb}kb_bin_size_{wildcards.bin_size}/{tf}.hdf5" for tf in TFs]
+    return svd_files
+
+
+wildcard_constraints:
+    window_kb="|".join([str(w) for w in config['Window_kb']]),
+    bin_size="|".join([str(b) for b in config['Bin_size']]),
+    genome="|".join(config['Genome']),
+    tf="|".join(get_tfs('mm10'))
+
 rule all:
     input:
         #
@@ -64,7 +76,8 @@ rule all:
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
         #expand('results/fig/hg38/Window_pm{window_kb}kb_bin_size_{bin_size}/svd/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs_st_exp_gt1('hg38')),
         #
-        expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
         #expand('results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf',genome=['mm10','hg38'])
@@ -146,9 +159,30 @@ rule make_track_hubs:
         python scripts/make_track_hubs.py
         """
 
+# rule Chip 1st comp. matrix:
+# TODO: make plot in a separate rule
+rule get_chip_1st_comp:
+    input:
+        svd_files=get_all_svd_files, # all svd files for dependence
+        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
+    output:
+        tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
+        #fig='results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf'
+    threads: 12
+    shell:
+        """
+        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_chip {input.chip} \
+                                                                           --infile_promoterome {input.promoterome} \
+                                                                           --infiles_svd {input.svd} \
+                                                                           --outfile_tf_pos_prom {output.tensor_tf_pos_prom} \
+                                                                           --genome {wildcards.genome} \
+                                                                           --window_kb {wildcards.window_kb}
+        """
+
 rule get_chip_tf_mode_pos_prom:
     input:
-        svd=expand('results/{{genome}}/svd/Window_pm{{window_kb}}kb_bin_size_{{bin_size}}/{tf}.hdf5',tf=get_tfs({{genome}})),
+        svd_files=get_all_svd_files, # all svd files for dependence
         chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
     output:
@@ -163,27 +197,6 @@ rule get_chip_tf_mode_pos_prom:
                                               --genome {wildcards.genome} \
                                               --window_kb {wildcards.window_kb}
         """
-
-# rule Chip 1st comp. matrix:
-rule get_chip_1st_comp:
-    input:
-        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
-        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
-    output:
-        tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_tf_binnedpos_prom.hdf5',
-        fig='results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf'
-    threads: 12
-    shell:
-        """
-        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_chip {input.chip} \
-                                                                           --infile_promoterome {input.promoterome} \
-                                                                           --outfile_tf_binnedpos_prom {output.file_tf_binnedPos_prom} \
-                                                                           --outfile_tf_pos_prom {output.file_tf_pos_prom} \
-                                                                           --outfig {output.fig} \
-                                                                           --genome {wildcards.genome} \
-                                                                           --window_kb {wildcards.window_kb}
-        """
-
 
 # run this rule only after downloading data with ./download_complex_data.sh
 rule get_tf_complex:
