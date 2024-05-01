@@ -117,7 +117,7 @@ rule make_peak_table:
     input:
         infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
     output:
-        table='results/{genome}/peak_table_pm{window_kb}kb.txt
+        table="results/{genome}/peak_table_pm{window_kb}kb.txt"
     params:
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
     shell:
