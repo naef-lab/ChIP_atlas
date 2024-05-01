@@ -127,18 +127,6 @@ rule make_peak_table:
 
 rule svd:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab" # only for dependency
-    output:
-        table="results/{genome}/peak_table_pm{window_kb}kb.txt"
-    params:
-        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
-    shell:
-        """
-        python scripts/make_peak_tables.py --genome {wildcards.genome} --promoterome {params.promoterome} --out_file {output.table}
-        """
-
-rule svd:
-    input:
         chip='results/{genome}/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5',
         peak='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5'
     output:
@@ -176,20 +164,19 @@ rule make_track_hubs:
 rule get_chip_1st_comp:
     input:
         svd_files=get_all_svd_files, # all svd files for dependence
-        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
     output:
         tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
         #fig='results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf'
-    threads: 12
+    threads: 1
     shell:
         """
-        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_chip {input.chip} \
-                                                                           --infile_promoterome {input.promoterome} \
-                                                                           --infiles_svd {input.svd} \
+        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_promoterome {input.promoterome} \
+                                                                           --infiles_svd {input.svd_files} \
                                                                            --outfile_tf_pos_prom {output.tensor_tf_pos_prom} \
                                                                            --genome {wildcards.genome} \
-                                                                           --window_kb {wildcards.window_kb}
+                                                                           --window_kb {wildcards.window_kb} \
+                                                                           --threads {threads}
         """
 
 rule get_chip_tf_mode_pos_prom:

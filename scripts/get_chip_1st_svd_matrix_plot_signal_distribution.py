@@ -4,18 +4,15 @@ import os
 import h5py
 import matplotlib.pyplot as plt
 import argparse
+import multiprocessing
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Make tensor of SVD 1st comp. of Chip signal')
-    parser.add_argument('--infile_chip'
-        ,required=True
-        ,type=str
-        ,help="Chip experiment table")
     parser.add_argument('--infile_promoterome'
         ,required=True
         ,type=str
         ,help="Promoterome bed file")
-    parser.add_argument('--svd_files'
+    parser.add_argument('--infiles_svd'
         ,nargs='+'
         ,required=True
         ,type=str
@@ -37,7 +34,18 @@ def parse_argument():
         ,required=True
         ,type=int
         ,help="Window size in kb")
+    parser.add_argument('--threads'
+        ,required=False
+        ,type=int
+        ,default=4
+        ,help="Number of threads")
     return parser.parse_args()
+
+def fill_in_tensor(infile):
+    with h5py.File(infile,'r') as hf:
+        U = hf['U'][:]
+        S = hf['S'][:]
+    return U*S
 
 
 if __name__ == '__main__':
@@ -48,18 +56,23 @@ if __name__ == '__main__':
     promoterome = pd.read_csv(args.infile_promoterome,sep='\t')
     idx_minus_strand = (promoterome.strand=='-').values
 
-    # Get all TFs
-    experiment_tf = pd.read_csv(args.infile_chip,sep='\t',usecols=[0,3])
-    experiment_tf.columns = ['id','antigen']
-
     # get dims
     N_prom = promoterome.shape[0]
-    N_pos = 100
-    N_tf = len(args.svd_files)
+    with h5py.File(args.infiles_svd[0],'r') as hf:
+        N_pos = hf['U'].shape[0]//N_prom
+    N_tf = len(args.infiles_svd)
+    
+    # run loop in parralel
+    #pool = multiprocessing.Pool(args.threads)
+    #out = zip(*pool.map(fill_in_tensor, args.infiles_svd))
+    #X = np.array(out).reshape([N_tf,N_pos,N_prom])
+    #for t in range(N_tf):
+    #    # flip promoters on minus strand
+    #    X[t,:,idx_minus_strand] = X[t,:,idx_minus_strand][:,::-1]
     
     # initilize tf x pos x prom tensor
     X = np.zeros([N_tf,N_pos,N_prom])
-    for t,infile in enumerate(args.svd_files):
+    for t,infile in enumerate(args.infiles_svd):
 
         if t%20==0:
             print(np.round(t/N_tf,3))
@@ -67,11 +80,10 @@ if __name__ == '__main__':
         with h5py.File(infile,'r') as hf:
             u = hf['U'][:,0]
             s = hf['S'][0]
-        
-        X[t,:,:] = np.reshape(u*s,[N_prom,N_pos]).T
-    
-    # flip promoters on minus strans
-    X[:,:,idx_minus_strand] = X[:,::-1,idx_minus_strand]
+        tmp = np.reshape(u*s,[N_prom,N_pos]).T
+        # flip promoters on minus strand
+        tmp[:,idx_minus_strand] = tmp[:,idx_minus_strand][:,::-1]
+        X[t,:,:] = tmp
 
     # save
     np.save(args.outfile_tf_pos_prom,X)
