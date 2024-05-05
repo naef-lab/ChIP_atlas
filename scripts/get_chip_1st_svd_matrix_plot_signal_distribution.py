@@ -86,7 +86,8 @@ if __name__ == '__main__':
         X[t,:,:] = tmp
 
     # save
-    np.save(args.outfile_tf_pos_prom,X)
+    with h5py.File(args.outfile_tf_pos_prom,'w') as hf:
+        hf.create_dataset('tf_pos_prom',data=X)
 
     #Chip_signal = X.mean(axis=2).mean(axis=0)
 #

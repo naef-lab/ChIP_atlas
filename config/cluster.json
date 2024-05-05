@@ -41,7 +41,15 @@
     {
         "name" : "chip_1st_comp",
         "time" : "24:00:00",
-        "cpus-per-task" : 12,
-        "mem" : "80G"
+        "cpus-per-task" : 1,
+        "mem" : "120G"
+    },
+
+    "plot_chip_1st_comp" :
+    {
+        "name" : "plot_chip_1st_comp",
+        "time" : "02:00:00",
+        "cpus-per-task" : 1,
+        "mem" : "20G"
     }
 }

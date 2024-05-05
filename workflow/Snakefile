@@ -78,6 +78,7 @@ rule all:
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
         #expand('results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf',genome=['mm10','hg38'])
@@ -177,6 +178,17 @@ rule get_chip_1st_comp:
                                                                            --genome {wildcards.genome} \
                                                                            --window_kb {wildcards.window_kb} \
                                                                            --threads {threads}
+        """
+
+rule plot_chip_1st_comp:
+    input:
+        infile_chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
+    output:
+        fig='results/fig/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf'
+    shell:
+        """
+        python scripts/plot_average_profile_per_TF.py --infile_chip {input.infile_chip} --infile_tf_pos_prom {input.tensor_tf_pos_prom} --outfig {output.fig} --genome {wildcards.genome} --window_kb {wildcards.window_kb} --bin_size {wildcards.bin_size}
         """
 
 rule get_chip_tf_mode_pos_prom:
