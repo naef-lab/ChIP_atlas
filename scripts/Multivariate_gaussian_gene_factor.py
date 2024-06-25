@@ -94,7 +94,7 @@ if __name__ == '__main__':
 
     genome = 'mm10'
     #genome = 'hg38'
-    window = '2'
+    window = '5'
     N_bin = 1
 
     # get promoterome
@@ -107,10 +107,12 @@ if __name__ == '__main__':
     TFs = experiment_tf.antigen.unique()
 
     # get binned chip signal per tf per prom
-    infile = f'results/{genome}/tensor_TFsvd1_tf_binnedpos_prom.hdf5'
+    #infile = f'results/{genome}/tensor_TFsvd1_tf_binnedpos_prom.hdf5'
+    infile = f'results/{genome}/svd/Window_pm{window}kb_bin_size_10/tensor_TFsvd1_pos_prom.hdf5'
 
     with h5py.File(infile,'r') as hf:
-        X = hf[str(N_bin)][:]
+        X = np.nanmean( hf['tf_pos_prom'][:], axis=1 )
+    X[np.isnan(X)] = 0
     # row: samples (prom_pos)
     # cols: feature (tf)
     X = X.T
@@ -176,10 +178,10 @@ if __name__ == '__main__':
     my_prec = lw_prec
 
     Gene_subset = ['aminoacyl_tRNA_synthetase','ribosomal_protein_genes','core_circadian_clock_genes','cytochrome_P450_CYP_superfamily']
-    Gene_subset = ['cytochrome_P450_CYP_superfamily']
-    Gene_subset = ['Stat5']
+    #Gene_subset = ['cytochrome_P450_CYP_superfamily']
+    #Gene_subset = ['Stat5']
 
-    Gene_subset = [f'Genes_model_{m}_BICW_gt_{th}_phase_{p}_pm_2' for m in [2,3,5] for th in [0.5,0.8,0.9] for p in np.arange(0,24,2)]
+    #Gene_subset = [f'Genes_model_{m}_BICW_gt_{th}_phase_{p}_pm_2' for m in [2,3,5] for th in [0.5,0.8,0.9] for p in np.arange(0,24,2)]
 
 
     # 1D conditional multivariate gaussian
