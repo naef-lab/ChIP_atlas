@@ -9,16 +9,10 @@ import argparse
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Save ChIP Peaks for tf in a sparse tensor (N_promoters x N_TF x N_positions).')
-    parser.add_argument('--genome'
+    parser.add_argument('--chip_experiment_table'
         ,required=True
         ,type=str
-        ,choices=['mm10','hg38']
-        ,help="genome version")
-    parser.add_argument('--window_kb'
-        ,default=2
-        ,type=int
-        ,choices=[1,2,3,5]
-        ,help="window size (in kb)")
+        ,help="ChIP-seq experiment table")
     parser.add_argument('--infile_promoterome'
         ,default="/home/jbreda/Promoterome/results/mm10/promoterome_pm1kb_filtered.bed"
         ,type=str
@@ -26,7 +20,12 @@ def parse_argument():
     parser.add_argument('--outfile_sparse_tensor'
         ,required=True
         ,type=str
-        ,help="Output sparse tensor")
+        ,help="Output sparse tensor file")
+    parser.add_argument('--window_kb'
+        ,default=2
+        ,type=int
+        ,choices=[1,2,3,5]
+        ,help="window size (in kb)")
     parser.add_argument('--threads'
         ,default=1
         ,type=int
@@ -56,20 +55,31 @@ def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,tf_j):
 
         # loop over all experiments
         for l,id in enumerate(IDs):
-            infile = f"../resources/tracks/mm10/{id}.05.bb"
-            with pyBigWig.open(infile) as bb:
-                # check if the chromosome is in the bigwig file and get the entries
-                if not chr in bb.chroms():
-                    continue
-                entries = bb.entries(chr, start, min(end,bb.chroms(chr)))
-                if entries == None:
-                    continue
 
-                # fill in the score matrix with the score of the experiment at the peak relative positions
-                for e in entries:
-                    score[l,(e[0]-start):(e[1]-start)] = int(e[2])
+            infile = f"resources/tracks/mm10/{id}.05.bb"
+            # open the bigwig file (continue if it doesn't open or exists)
+            try:
+                bb = pyBigWig.open(infile)
+            except:
+                continue
+        
+            # check if the chromosome is in the bigwig file and get the entries
+            if not chr in bb.chroms():
+                continue
 
-        # if there are no peaks for this TF in this promoter, skip
+            # get the entries in the window size around the promoter exit if empty
+            entries = bb.entries(chr, start, min(end,bb.chroms(chr)))
+            if entries == None:
+                continue
+
+            # fill in the score matrix with the score of the experiment at the peak relative positions
+            for e in entries:
+                score[l,(e[0]-start):(e[1]-start)] = int(e[2])
+            
+            # close the bigwig file
+            bb.close()
+
+        # if there are no peaks for this TF in this promoter (or bb file couldn't open), then skip
         if np.isnan(score).all():
             continue
 
@@ -104,13 +114,12 @@ if __name__ == '__main__':
     args = parse_argument()
 
     # load promoters
-    promoterome = pd.read_csv(args.infile_promoter ,sep='\t')
+    promoterome = pd.read_csv(args.infile_promoterome ,sep='\t')
     CHR = promoterome.chr.unique()
     STRAND = ['+','-']
 
     # load chip experiments table
-    infile=f"../resources/experimentList_{args.genome}_TFs_only_QC_filtered.tab"
-    experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
+    experiment_tf = pd.read_csv(args.chip_experiment_table,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
 
     # get the TFs and their index
@@ -119,7 +128,7 @@ if __name__ == '__main__':
 
     # get the peak positions of the TFs in the promoters run in parallel for all TFs
     with Pool(processes=args.threads) as pool:
-        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,window_kb), TF_IDX)
+        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,args.window_kb), TF_IDX)
     
     # concatenate the results in one matrix (i,j,k,val) x N_peaks, where i=promoter, j=tf, k=position, val=score
     IJKval = np.zeros([4,0])
@@ -129,10 +138,10 @@ if __name__ == '__main__':
     # make sparse tensor
     indices = IJKval[:3].astype(int)
     values = IJKval[3]
-    my_size = [promoterome.shape[0],TFs.shape[0],window_kb*2*1000]
+    my_size = [promoterome.shape[0],TFs.shape[0],args.window_kb*2*1000]
     PromTfPos = torch.sparse_coo_tensor(indices, values, size=my_size)
 
     # save tensor
-    torch.save(PromTfPos, args.outfile)
+    torch.save(PromTfPos, args.outfile_sparse_tensor)
 
 

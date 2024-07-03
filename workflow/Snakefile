@@ -68,6 +68,7 @@ rule all:
         #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
+        expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
@@ -77,8 +78,8 @@ rule all:
         #expand('results/fig/hg38/Window_pm{window_kb}kb_bin_size_{bin_size}/svd/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs_st_exp_gt1('hg38')),
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
         #expand('results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf',genome=['mm10','hg38'])
@@ -116,7 +117,7 @@ rule make_peak_tensors:
 
 rule make_peak_table:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# only for dependency
+        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
     output:
         table="results/{genome}/peak_table_pm{window_kb}kb.txt"
     params:
@@ -124,6 +125,22 @@ rule make_peak_table:
     shell:
         """
         python scripts/make_peak_tables.py --genome {wildcards.genome} --promoterome {params.promoterome} --out_file {output.table}
+        """
+
+rule make_peak_prom_tf_pos_sparse_tensor:
+    input:
+        chip_experiment_table="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered.bed"
+    output:
+        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt'
+    threads: 36
+    shell:
+        """
+        python scripts/make_peak_prom_tf_pos_tensor.py --chip_experiment_table {input.chip_experiment_table} \
+                                                       --infile_promoterome {input.promoterome} \
+                                                       --outfile {output.tensor} \
+                                                       --window_kb {wildcards.window_kb} \
+                                                       --threads {threads}
         """
 
 rule svd:
