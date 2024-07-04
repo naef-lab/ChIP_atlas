@@ -2,6 +2,10 @@ Genome:
   - mm10
   - hg38
 
+Version:
+  - v2
+  - v3
+
 Window_kb:
   - 5
 Bin_size:
