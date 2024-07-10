@@ -47,3 +47,11 @@ Promoterome:
 TF_Complex:
   mm10: resources/complex/MusMusculus.tsv
   hg38: resources/complex/HomoSapiens.tsv
+
+Genome_fasta:
+  mm10: genome/mm10/Mus_musculus.GRCm38.dna.primary_assembly.fa
+  hg38: genome/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.fa
+  
+Chrom_size:
+  mm10: genome/mm10/Mus_musculus.GRCm38.dna.primary_assembly.chrom.sizes
+  hg38: genome/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.chrom.sizes

@@ -6,7 +6,7 @@ configfile: 'config/chip_seq.yaml'
 #for genome in config['Genome']:
     #print(genome)
     # input/output
-    #infile=f'resources/experimentList_{genome}_TFs_only.tab'
+    #infile=f'resources/wiggletools mean_v3_{genome}_TFs_only.tab'
     # get tf:experiment dictionary
     #experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3],index_col=0)
     #experiment_tf.index = [f'resources/tracks/{genome}/{x}.bw' for x in experiment_tf.index]
@@ -15,7 +15,7 @@ configfile: 'config/chip_seq.yaml'
         #TF_EXPERIMENT[genome][tf] = list(TF_EXPERIMENT[genome][tf])
 
 def get_chip_table(genome):
-    infile=f"resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+    infile=f"resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
 
@@ -51,24 +51,34 @@ def get_all_svd_files(wildcards):
     svd_files = [f"results/{wildcards.genome}/svd/Window_pm{wildcards.window_kb}kb_bin_size_{wildcards.bin_size}/{tf}.hdf5" for tf in TFs]
     return svd_files
 
+def get_tf_mean_wig_promoter(wildcards):
+    TFs = get_tfs(wildcards.genome)
+    files = [f"results/{wildcards.genome}/TF_mean_chip_prom_pm{wildcards.window_kb}kb/{tf}.wig" for tf in TFs]
+
+    return files
 
 wildcard_constraints:
     window_kb="|".join([str(w) for w in config['Window_kb']]),
     bin_size="|".join([str(b) for b in config['Bin_size']]),
     genome="|".join(config['Genome']),
-    tf="|".join(get_tfs('mm10'))
+    tf="|".join(get_tfs('mm10')) + "|" + "|".join(get_tfs('hg38'))
 
 rule all:
     input:
         #
-        #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        #expand('results/mm10/TF_mean_chip/{tf}.wig', tf=get_tfs('mm10') ),
+        expand('results/mm10/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
+        expand('results/mm10/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
+        #expand('results/hg38/TF_mean_chip/{tf}.wig', tf=get_tfs('hg38') ),
+        #expand('results/hg38/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
+        #expand('results/hg38/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
         #
         #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38') ),
         #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
-        expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
@@ -92,9 +102,68 @@ rule all:
 
 # First download data: workflow/Dowload_experiments.smk
 # Or rsync between servers
+rule chrom_size:
+    input:
+        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
+    output:
+        chrom_size='resources/{genome}_chrom_size.txt'
+    shell:
+        """
+        python scripts/get_chrom_size.py --chip_experiment {input.chip} --genome {wildcards.genome} --outfile {output.chrom_size}
+        """
+
+rule mean_chip_TF:
+    input:
+        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
+        exp_list=get_experiments_bw
+    output:
+        mean_wig='results/{genome}/TF_mean_chip/{tf}.wig'
+    shell:
+        """
+        wiggletools mean {input.exp_list} > {output.mean_wig}
+        """
+
+rule intersect_mean_chip_TF_with_promoter:
+    input:
+        wig='results/{genome}/TF_mean_chip/{tf}.wig',
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
+    output:
+        wig_promoterome='results/{genome}/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig'
+    shell:
+        """
+        wiggletools overlaps {input.promoterome} {input.wig} > {output.wig_promoterome}
+        """
+
+rule sum_TF_chip:
+    input:
+        tf_wigs_promoterome=get_tf_mean_wig_promoter,
+        chrom_size='resources/{genome}_chrom_size.txt'
+    output:
+        sum_bw='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.bw'
+    params:
+        sum_wig='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.wig'
+    shell:
+        """
+        wiggletools sum {input.tf_wigs_promoterome} > {params.sum_wig}
+        wigToBigWig {params.sum_wig} {input.chrom_size} {output.sum_bw}
+        """
+
+# TODO: peak calling on summed bw in promoterome
+#rule call_peaks:
+#    input:
+#        sum_bw='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.bw'
+#        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
+#    output:
+#        peaks='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb_peaks.bed
+#    shell:
+#        """
+#        python scripts/call_peaks.py --infile_sum_bw {input.sum_bw} --infile_promoterome {input.promoterome} --outfile {output.peaks}
+#        """
+
+
 rule make_chip_tensors:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# Dependence: used in get_experiments_bw
+        infile="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",# Dependence: used in get_experiments_bw
         exp_list=get_experiments_bw
     output:
         tensor='results/{genome}/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5'
@@ -106,7 +175,7 @@ rule make_chip_tensors:
 
 rule make_peak_tensors:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",# Dependence: used in get_experiments_bb
+        infile="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",# Dependence: used in get_experiments_bb
         exp_list=get_experiments_bb
     output:
         tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5'
@@ -117,7 +186,7 @@ rule make_peak_tensors:
 
 rule make_peak_table:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        infile="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
     output:
         table="results/{genome}/peak_table_pm{window_kb}kb.txt"
     params:
@@ -129,7 +198,7 @@ rule make_peak_table:
 
 rule make_peak_prom_tf_pos_sparse_tensor:
     input:
-        chip_experiment_table="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered.bed"
     output:
         tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt'
@@ -167,7 +236,7 @@ rule plot_svd:
 
 rule make_track_hubs:
     input:
-        chip=expand("resources/experimentList_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
+        chip=expand("resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
         mm10=expand('results/mm10/svd/{tf}.hdf5', tf=get_tfs('mm10') ),
         hg38=expand('results/hg38/svd/{tf}.hdf5', tf=get_tfs('hg38') )
     output:
@@ -199,7 +268,7 @@ rule get_chip_1st_comp:
 
 rule plot_chip_1st_comp:
     input:
-        infile_chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        infile_chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
         tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
     output:
         fig='results/fig/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf'
@@ -211,7 +280,7 @@ rule plot_chip_1st_comp:
 rule get_chip_tf_mode_pos_prom:
     input:
         svd_files=get_all_svd_files, # all svd files for dependence
-        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab",
+        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
     output:
         tensor_tf_pos_prom='results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5',
@@ -229,7 +298,7 @@ rule get_chip_tf_mode_pos_prom:
 # run this rule only after downloading data with ./download_complex_data.sh
 rule get_tf_complex:
     input:
-        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
     output:
         results="results/{genome}/TF_Complex.tsv"
     params:
@@ -246,7 +315,7 @@ rule get_tf_complex:
 # Chip peaks rules:
 rule merge_peaks_per_tf:
     input:
-        infile="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+        infile="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
     output:
         bedfile='results/{genome}/TF_bedfiles/{tf}.bed'
     threads: 4
@@ -269,7 +338,7 @@ rule intersect_peaks_with_promoterome:
 rule get_nr_of_peaks_per_prom:
     input:
         promoterome="/home/jbreda/Promoterome/results/{{genome}}/promoterome_pm{win}kb_filtered.bed".format(win = config['Window_kb']),
-        chip="resources/experimentList_{genome}_TFs_only_QC_filtered.tab"
+        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
     output:
         file='results/{genome}/nr_peaks_per_prom_per_tf.tsv'
     shell:

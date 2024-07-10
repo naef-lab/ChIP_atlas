@@ -1,6 +1,7 @@
 import pyBigWig
 import pandas as pd
 import argparse
+import os
 
 #genome = 'hg38'
 #genome = 'mm10'
@@ -30,16 +31,23 @@ if __name__ == '__main__':
 
     with open(args.outfile,'w') as fout:
         for id in chip_tf.index:
-
-            try:
-                pyBigWig.open(f'resources/tracks/{args.genome}/{id}.05.bb')
-            except:
-                print(id)
+            if os.path.exists(f'resources/tracks/{args.genome}/{id}.05.bb'):
+                try:
+                    pyBigWig.open(f'resources/tracks/{args.genome}/{id}.05.bb')
+                except:
+                    print(f'{id} unopenable')
+                    fout.write(f'{id}.05.bb\n')
+            else:
+                print(f'{id} missing')
                 fout.write(f'{id}.05.bb\n')
-                
-            try:
-                pyBigWig.open(f'resources/tracks/{args.genome}/{id}.bw')
-            except:
-                print(id)
+
+            if os.path.exists(f'resources/tracks/{args.genome}/{id}.bw'):
+                try:
+                    pyBigWig.open(f'resources/tracks/{args.genome}/{id}.bw')
+                except:
+                    print(id)
+                    fout.write(f'{id}.bw\n')
+            else:
+                print(f'{id} missing')
                 fout.write(f'{id}.bw\n')
             

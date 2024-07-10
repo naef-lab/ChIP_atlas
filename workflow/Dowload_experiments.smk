@@ -10,11 +10,12 @@ wildcard_constraints:
 
 rule all:
     input:
-        expand("results/fig/hist_antigen_class_per_genome_{version}.pdf",version=['v2','v3']),
-        expand("results/fig/hist_experiment_QC_{version}.pdf",version=['v2','v3']),
-        expand("results/fig/hist_peaks_per_unique_mapped_read_{version}.pdf",version=['v2','v3']),
-        expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=['v2','v3']),
+        #expand("results/fig/hist_antigen_class_per_genome_{version}.pdf",version=['v2','v3']),
+        #expand("results/fig/hist_experiment_QC_{version}.pdf",version=['v2','v3']),
+        #expand("results/fig/hist_peaks_per_unique_mapped_read_{version}.pdf",version=['v2','v3']),
+        #expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=['v2','v3']),
         expand("log/download_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v2','v3']),
+        expand("resources/to_dowload_{version}_{genome}.txt",genome=['mm10','hg38'],version=['v2','v3']),
         expand("log/redownload_error_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v2','v3'])
 
 # Make GeneID to GeneName dictionary
