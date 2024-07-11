@@ -7,7 +7,7 @@
         "stderr" : "stderr/slurm-%x-%j",
         "time" : "01:00:00",
         "n" : 1,
-        "mem" : "20G",
+        "mem" : "6G",
         "nodes" : 1,
         "ntasks" : 1,
         "cpus-per-task" : 1

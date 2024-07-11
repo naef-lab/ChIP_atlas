@@ -67,11 +67,11 @@ rule all:
     input:
         #
         #expand('results/mm10/TF_mean_chip/{tf}.wig', tf=get_tfs('mm10') ),
-        expand('results/mm10/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
-        expand('results/mm10/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
+        #expand('results/mm10/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
+        #expand('results/mm10/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
         #expand('results/hg38/TF_mean_chip/{tf}.wig', tf=get_tfs('hg38') ),
         #expand('results/hg38/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
-        #expand('results/hg38/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
+        expand('results/hg38/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
         #
         #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38') ),
