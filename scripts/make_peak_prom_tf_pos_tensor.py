@@ -101,10 +101,14 @@ def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,tf_j):
         # get the score and position and save in Peaks matrix
         for peak in peaks:
             mean_score = np.nanmean(score[:,peak[0]:peak[1]])
-            k = int((peak[0]+peak[1])/2)
-            ijkval = np.array([i,j,k,mean_score])[:,None]
+            ijkval = np.zeros([4,peak[1]-peak[0]])*np.nan
+            ijkval[0,:] = i
+            ijkval[1,:] = j
+            ijkval[2,:] = np.arange(peak[0],peak[1])
+            ijkval[3,:] = mean_score
+            #k = int((peak[0]+peak[1])/2)
+            #ijkval = np.array([i,j,k,mean_score])[:,None]
             IJKval = np.concatenate([IJKval,ijkval],1)
-
         
     return IJKval
 
