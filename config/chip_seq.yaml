@@ -55,3 +55,5 @@ Genome_fasta:
 Chrom_size:
   mm10: genome/mm10/Mus_musculus.GRCm38.dna.primary_assembly.chrom.sizes
   hg38: genome/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.chrom.sizes
+
+PWM_threshold: 0.5

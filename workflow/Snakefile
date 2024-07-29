@@ -78,7 +78,11 @@ rule all:
         #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
-        expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/regulatory_regions_pm{window_kb}kb.bed', window_kb=config['Window_kb']),
+        #expand('results/{genome}/regulatory_regions_pm{window_kb}kb.npy', window_kb=config['Window_kb']),
+        #expand('results/{genome}/N_sf_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
+        expand('results/{genome}/N_sm_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/E2f1.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
@@ -148,8 +152,88 @@ rule sum_TF_chip:
         wigToBigWig {params.sum_wig} {input.chrom_size} {output.sum_bw}
         """
 
-# TODO: peak calling on summed bw in promoterome
-#rule call_peaks:
+# get regulatory regions
+rule make_WholePeak_prom_tf_pos_sparse_tensor:
+    input:
+        chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
+    output:
+        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/WholePeak_sparse_tensor_prom_tf_position.pt'
+    threads: 46
+    shell:
+        """
+        python scripts/make_peak_prom_tf_pos_sparse_tensor.py --chip_experiment_table {input.chip_experiment_table} \
+                                                              --infile_promoterome {input.promoterome} \
+                                                              --outfile {output.tensor} \
+                                                              --window_kb {wildcards.window_kb} \
+                                                              --threads {threads} \
+        """
+
+rule make_PeakCenter_prom_tf_pos_sparse_tensor:
+    input:
+        chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
+    output:
+        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt'
+    threads: 46
+    shell:
+        """
+        python scripts/make_peak_prom_tf_pos_sparse_tensor.py --chip_experiment_table {input.chip_experiment_table} \
+                                                              --infile_promoterome {input.promoterome} \
+                                                              --outfile {output.tensor} \
+                                                              --window_kb {wildcards.window_kb} \
+                                                              --threads {threads} \
+                                                              --peak_center_only
+        """
+
+rule get_regulatory_regions:
+    input:
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed",
+        atac_samples="/home/jbreda/ATACseq/resources/SraRunTable.txt",
+        chip_peak_tensor="results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt"
+    output:
+        bed='results/{genome}/regulatory_regions_pm{window_kb}kb.bed',
+        npy='results/{genome}/regulatory_regions_pm{window_kb}kb.npy'
+    threads: 36
+    shell:
+        """
+        python scripts/get_regulatory_regions.py --genome {wildcards.genome} --window_kb {wildcards.window_kb} --promoterome {input.promoterome} --atac_samples {input.atac_samples} --chip_peak_sparse_tensor {input.chip_peak_tensor} --out_bedfile {output.bed} --out_matrix {output.npy}
+        """
+
+rule get_N_sf:
+    input:
+        regulatory_regions="results/{genome}/regulatory_regions_pm{window_kb}kb.bed",
+        chip_experiments="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
+    output:
+        matrix='results/{genome}/N_sf_pm{window_kb}kb.npy'
+    threads: 46
+    shell:
+        """
+        python scripts/get_N_sf.py --genome {wildcards.genome} \
+                                   --regulatory_regions {input.regulatory_regions} \
+                                   --chip_experiments {input.chip_experiments} \
+                                   --out_matrix {output.matrix} \
+                                   --threads {threads}
+        """
+
+rule get_N_sm:
+    input:
+        regulatory_regions="results/{genome}/regulatory_regions_pm{window_kb}kb.bed",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed",
+        jaspar="/home/jbreda/Jaspar/results/{genome}/Window_pm{window_kb}kb/convolution_PromSeq_PWM.hdf5"
+    output:
+        matrix='results/{genome}/N_sm_pm{window_kb}kb.npy'
+    params:
+        pmw_threshold=config['PWM_threshold']
+    shell:
+        """
+        python scripts/get_N_sm.py --regulatory_regions {input.regulatory_regions} \
+                                   --promoterome {input.promoterome} \
+                                   --jaspar_conv_tensor {input.jaspar} \
+                                   --threshold {params.pmw_threshold} \
+                                   --out_matrix {output.matrix}
+        """
+
 #    input:
 #        sum_bw='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.bw'
 #        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered.bed"
@@ -196,21 +280,6 @@ rule make_peak_table:
         python scripts/make_peak_tables.py --genome {wildcards.genome} --promoterome {params.promoterome} --out_file {output.table}
         """
 
-rule make_peak_prom_tf_pos_sparse_tensor:
-    input:
-        chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
-        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
-    output:
-        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/Sparse_peak_tensor_prom_tf_position.pt'
-    threads: 72
-    shell:
-        """
-        python scripts/make_peak_prom_tf_pos_tensor.py --chip_experiment_table {input.chip_experiment_table} \
-                                                       --infile_promoterome {input.promoterome} \
-                                                       --outfile {output.tensor} \
-                                                       --window_kb {wildcards.window_kb} \
-                                                       --threads {threads}
-        """
 
 rule svd:
     input:

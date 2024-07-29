@@ -30,12 +30,15 @@ def parse_argument():
         ,default=1
         ,type=int
         ,help="Number of threads")
+    parser.add_argument('--peak_center_only'
+        ,action='store_true'
+        ,help="Use only the center of the peak")
 
     return parser.parse_args()
 
 
 # get the peak positions of the TFs in the promoters
-def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,tf_j):
+def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,peak_center,tf_j):
     tf = tf_j[0]
     j = tf_j[1]
 
@@ -101,13 +104,16 @@ def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,tf_j):
         # get the score and position and save in Peaks matrix
         for peak in peaks:
             mean_score = np.nanmean(score[:,peak[0]:peak[1]])
-            ijkval = np.zeros([4,peak[1]-peak[0]])*np.nan
-            ijkval[0,:] = i
-            ijkval[1,:] = j
-            ijkval[2,:] = np.arange(peak[0],peak[1])
-            ijkval[3,:] = mean_score
-            #k = int((peak[0]+peak[1])/2)
-            #ijkval = np.array([i,j,k,mean_score])[:,None]
+            if peak_center:
+                k = int((peak[0]+peak[1])/2)
+                ijkval = np.array([i,j,k,mean_score])[:,None]
+            else:
+                ijkval = np.zeros([4,peak[1]-peak[0]])*np.nan
+                ijkval[0,:] = i
+                ijkval[1,:] = j
+                ijkval[2,:] = np.arange(peak[0],peak[1])
+                ijkval[3,:] = mean_score
+            
             IJKval = np.concatenate([IJKval,ijkval],1)
         
     return IJKval
@@ -118,7 +124,8 @@ if __name__ == '__main__':
     args = parse_argument()
 
     # load promoters
-    promoterome = pd.read_csv(args.infile_promoterome ,sep='\t')
+    promoterome = pd.read_csv(args.infile_promoterome ,sep='\t',header=None)
+    promoterome.columns = ['chr','start','end','strand','black_listed','gene','id']
     CHR = promoterome.chr.unique()
     STRAND = ['+','-']
 
@@ -132,7 +139,7 @@ if __name__ == '__main__':
 
     # get the peak positions of the TFs in the promoters run in parallel for all TFs
     with Pool(processes=args.threads) as pool:
-        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,args.window_kb), TF_IDX)
+        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,args.window_kb,args.peak_center_only), TF_IDX)
     
     # concatenate the results in one matrix (i,j,k,val) x N_peaks, where i=promoter, j=tf, k=position, val=score
     IJKval = np.zeros([4,0])
