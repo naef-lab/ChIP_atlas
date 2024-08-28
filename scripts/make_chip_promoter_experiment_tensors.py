@@ -8,6 +8,10 @@ from functools import partial
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Save ChIP signals for tf in tensor (N_promoters x N_positions X N_experiments).')
+    parser.add_argument('--promoterome'
+        ,required=True,
+        type=str,
+        help="Promoterome file")
     parser.add_argument('--threads'
         ,required=True
         ,type=int
@@ -26,7 +30,7 @@ def parse_argument():
         ,type=int
         ,help="window size (in kb)")
     parser.add_argument('--bin_size'
-        ,default=20
+        ,default=10
         ,type=int
         ,help="bin size")
     parser.add_argument('--infiles_tf'
@@ -38,6 +42,7 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="Output hfd5 file with tensor")
+
 
     return parser.parse_args()
 
@@ -57,10 +62,9 @@ def fill_experiment(exp,promoter,N_pos):
 if __name__ == '__main__':
 
     args = parse_argument()
-    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed" 
 
     # load promoters
-    promoter = pd.read_csv(infile_promoter ,sep='\t')
+    promoter = pd.read_csv(args.promoterome ,sep='\t')
                            
     # get tensor dimention and initialize
     N_prom = promoter.shape[0]
@@ -92,6 +96,6 @@ if __name__ == '__main__':
         d.attrs['genome'] = args.genome
         d.attrs['window_kb'] = args.window_kb
         d.attrs['bin_size'] = args.bin_size
-        d.attrs['promoterome'] = infile_promoter
+        d.attrs['promoterome'] = args.promoterome
         
         

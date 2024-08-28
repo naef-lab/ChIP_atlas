@@ -99,6 +99,7 @@ if __name__ == '__main__':
 
     # Keep only antigens that are in TF list or which have synonym in TF list
     tf_id = []
+    tf_out = []
     for id in chip.index:
         antigen = chip.at[id,'antigen']
         # if antigen is in TF list add id
@@ -109,6 +110,8 @@ if __name__ == '__main__':
             gene_name = Gene_id_name_syn.loc[ Gene_id_name_syn['Gene Synonym']==antigen, 'Gene name'].values
             if any([g in TFs.GeneName.values for g in gene_name]):
                 tf_id.append(id)
+        else:
+            tf_out.append(antigen)
 
     # print kept ratio
     print(f'{args.genome}: {len(tf_id)/chip.shape[0]} in TF list')
