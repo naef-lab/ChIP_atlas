@@ -10,33 +10,42 @@ wildcard_constraints:
 
 rule all:
     input:
+        #expand("genome/{genome}/GeneName_Synonyms_dict.txt",genome=config['Genome']),
+        #expand("resources/{genome}/TF_list.txt",genome=config['Genome']),
         #expand("results/fig/hist_antigen_class_per_genome_{version}.pdf",version=['v2','v3']),
         #expand("results/fig/hist_experiment_QC_{version}.pdf",version=['v2','v3']),
         #expand("results/fig/hist_peaks_per_unique_mapped_read_{version}.pdf",version=['v2','v3']),
-        #expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=['v2','v3']),
-        expand("log/download_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v2','v3']),
-        expand("resources/to_dowload_{version}_{genome}.txt",genome=['mm10','hg38'],version=['v2','v3']),
-        expand("log/redownload_error_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v2','v3'])
+        #expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=['v3']),
+        #expand("log/download_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v3']),
+        #expand("resources/to_redowload_{version}_{genome}.txt",genome=['mm10','hg38'],version=['v3']),
+        expand("log/redownload_error_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v3'])
 
 # Make GeneID to GeneName dictionary
 rule GeneID_GeneName_Synonym_dict:
     input:
         "genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
     output:
-        "genome/{genome}/{genome}_GeneID_GeneName_Synonyms_dict.txt"
+        table="genome/{genome}/GeneName_Synonyms_dict.txt",
+        dict="genome/{genome}/GeneName_Synonyms_dict.pkl"
     shell:
-        "python scripts/get_GeneID_GeneName_Synonym_dict.py --infile {input} --outfile {output}"
+        "python scripts/get_GeneID_GeneName_Synonym_dict.py --infile {input} --outfile_table {output.table} --outfile_dict {output.dict}"
 
-rule get_mm10_TF_list:
+rule get_TF_list:
     input:
-        TFs="genome/mm10/mm10_TF_ID_list.csv",
-        gene_dict="genome/mm10/mm10_GeneID_GeneName_Synonyms_dict.txt"
+        geneid_genename_synonym="genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz",
+        synonym_genename="genome/{genome}/GeneName_Synonyms_dict.pkl",
+        TFs = lambda wildcards: config['Curated_TF_list'][wildcards.genome],
+        GO_terms=lambda wildcards: expand("resources/GO_terms/{genome}/{go_term}.txt",go_term=config['GO_list'],genome=wildcards.genome)
     output:
-        TFs="genome/mm10_TF_list.csv"
+        TFs="resources/{genome}/TF_list.txt"
     shell:
         """
-        python scripts/get_mm_TF_list.py --infile_tf {input.TFs} --infile_gene_dict {input.gene_dict} --outfile {outpu.TFs}
-        cp {output} /bigdata/jbreda/genome/mm39_TF_list.csv
+        python scripts/get_TF_list.py --geneid_genename_synonym_table {input.geneid_genename_synonym} \
+                                      --synonym_genename_dict {input.synonym_genename} \
+                                      --infile_tf_list {input.TFs} \
+                                      --infiles_GO_terms {input.GO_terms} \
+                                      --genome {wildcards.genome} \
+                                      --outfile {output.TFs}
         """
 
 # Plot all QC stats for all genomes
@@ -63,8 +72,9 @@ rule plot_chip_experiments_stats_QC:
 rule get_ChIP_experiments_TF_QC_filtered:
     input:
         chip="resources/experimentList_{version}.tab",
-        tfs="genome/{genome}/{genome}_TF_list.csv",
-        gene_dict="genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz"
+        tfs="resources/{genome}/TF_list.txt",
+        geneid_genename_synonym="genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz",
+        synonym_genename="genome/{genome}/GeneName_Synonyms_dict.pkl",
     output:
         chip="resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab"
     params:
@@ -75,7 +85,17 @@ rule get_ChIP_experiments_TF_QC_filtered:
         th_exp_per_tf=config['Threshold']['n_exp_per_tf']
     shell:
         """
-        python scripts/get_experimentList_TF.py --infile_chip {input.chip} --infile_tfs {input.tfs} --infile_gene_dict {input.gene_dict} --outfile {output.chip} --genome {wildcards.genome} --th_reads {params.th_reads} --th_mapped_reads {params.th_mapped_reads} --th_duplicates {params.th_duplicates} --th_peaks {params.th_peaks} --th_exp_per_tf {params.th_exp_per_tf}
+        python scripts/get_experimentList_TF.py --infile_chip {input.chip} \
+                                                --infile_tfs {input.tfs} \
+                                                --geneid_genename_synonym_table {input.geneid_genename_synonym} \
+                                                --synonym_genename_dict {input.synonym_genename} \
+                                                --outfile {output.chip} \
+                                                --genome {wildcards.genome} \
+                                                --th_reads {params.th_reads} \
+                                                --th_mapped_reads {params.th_mapped_reads} \
+                                                --th_duplicates {params.th_duplicates} \
+                                                --th_peaks {params.th_peaks} \
+                                                --th_exp_per_tf {params.th_exp_per_tf}
         """
 
 # First download data: download_chip_data.sh -> check_tracks.py -> redownload_error_chip_data.sh
@@ -94,7 +114,7 @@ rule check_tracks:
     input:
         "resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab"
     output:
-        "resources/to_dowload_{version}_{genome}.txt"
+        "resources/to_redowload_{version}_{genome}.txt"
     shell:
         """
         python scripts/check_tracks.py --genome {wildcards.genome} --infile {input} --outfile {output}
@@ -103,7 +123,7 @@ rule check_tracks:
 # Redownload error tracks
 rule redownload_error_chip_data:
     input:
-        "resources/to_dowload_{version}_{genome}.txt"
+        "resources/to_redowload_{version}_{genome}.txt"
     output:
         "log/redownload_error_chip_data_{version}_{genome}.log"
     shell:

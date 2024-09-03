@@ -14,7 +14,6 @@ def parse_argument():
         ,type=str
         ,help="ChIP-seq experiment table")
     parser.add_argument('--infile_promoterome'
-        ,default="/home/jbreda/Promoterome/results/mm10/promoterome_pm1kb_filtered.bed"
         ,type=str
         ,help="Promoterome bed files")
     parser.add_argument('--outfile_sparse_tensor'
@@ -30,6 +29,11 @@ def parse_argument():
         ,default=1
         ,type=int
         ,help="Number of threads")
+    parser.add_argument('--genome'
+        ,required=True
+        ,type=str
+        ,choices=['mm10','hg38']
+        ,help="Genome version (mm10 or hg38)")
     parser.add_argument('--peak_center_only'
         ,action='store_true'
         ,help="Use only the center of the peak")
@@ -38,7 +42,7 @@ def parse_argument():
 
 
 # get the peak positions of the TFs in the promoters
-def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,peak_center,tf_j):
+def find_tf_peaks_in_promoter(promoterome,experiment_tf,track_folder,window_kb,peak_center,tf_j):
     tf = tf_j[0]
     j = tf_j[1]
 
@@ -59,7 +63,7 @@ def find_tf_peaks_in_promoter(promoterome,experiment_tf,window_kb,peak_center,tf
         # loop over all experiments
         for l,id in enumerate(IDs):
 
-            infile = f"resources/tracks/mm10/{id}.05.bb"
+            infile = f"{track_folder}/{id}.05.bb"
             # open the bigwig file (continue if it doesn't open or exists)
             try:
                 bb = pyBigWig.open(infile)
@@ -124,14 +128,14 @@ if __name__ == '__main__':
     args = parse_argument()
 
     # load promoters
-    promoterome = pd.read_csv(args.infile_promoterome ,sep='\t',header=None)
-    promoterome.columns = ['chr','start','end','strand','black_listed','gene','id']
+    promoterome = pd.read_csv(args.infile_promoterome ,sep='\t',dtype= {'chr':'str','start':'int','end':'int','strand':'str', 'black_listed ':'str' , 'gene':'str', 'id':'str'} )
     CHR = promoterome.chr.unique()
     STRAND = ['+','-']
 
     # load chip experiments table
     experiment_tf = pd.read_csv(args.chip_experiment_table,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
+    track_folder = f"resources/tracks/{args.genome}"
 
     # get the TFs and their index
     TFs = experiment_tf.antigen.unique()
@@ -139,7 +143,7 @@ if __name__ == '__main__':
 
     # get the peak positions of the TFs in the promoters run in parallel for all TFs
     with Pool(processes=args.threads) as pool:
-        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,args.window_kb,args.peak_center_only), TF_IDX)
+        OUT = pool.map(partial(find_tf_peaks_in_promoter,promoterome,experiment_tf,track_folder,args.window_kb,args.peak_center_only), TF_IDX)
     
     # concatenate the results in one matrix (i,j,k,val) x N_peaks, where i=promoter, j=tf, k=position, val=score
     IJKval = np.zeros([4,0])

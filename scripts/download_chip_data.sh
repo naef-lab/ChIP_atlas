@@ -1,46 +1,6 @@
 #!/bin/bash
 
-# filter metadata
-# mm10
-# cat experimentList.tab | awk '($2=="mm10") && ($3=="TFs") {print $0}' | \
-#     grep -v "Epitope tags" | \
-#     grep -v "Succinyllysine" | \
-#     grep -v "Propionyllysine" | \
-#     grep -v "O-GlcNAc" | \
-#     grep -v "Lysin homocysteine" | \
-#     grep -v "Crotonyl lysine" | \
-#     grep -v "Butyryllysine" | \
-#     grep -v "8-Hydroxydeoxyguanosine" | \
-#     grep -v "5-hmC" | \
-#     grep -v "5-mC" | \
-#     grep -v "ADP-ribose" > experimentList_mm10_TFs.tab
-# hg38
-# cat experimentList.tab | awk '($2=="hg38") && ($3=="TFs") {print $0}' | \
-#     grep -v "Pan-acetyllysine" | \
-#     grep -v "O-GlcNAc" | \
-#     grep -v "MethylCap" | \
-#     grep -v "Hepatitis B Virus X antigen" | \
-#     grep -v "Epitope tags" | \
-#     grep -v "Cyclobutane pyrimidine dimers" | \
-#     grep -v "Crotonyllysine" | \
-#     grep -v "8-Hydroxydeoxyguanosine" | \
-#     grep -v "5-hmC" | \
-#     grep -v "5-mC" > experimentList_hg38_TFs.tab
-# hg19
-# cat experimentList.tab | awk '($2=="hg19") && ($3=="TFs") {print $0}' | \
-#     grep -v "Pan-acetyllysine" | \
-#     grep -v "O-GlcNAc" | \
-#     grep -v "MethylCap" | \
-#     grep -v "Hepatitis B Virus X antigen" | \
-#     grep -v "Epitope tags" | \
-#     grep -v "Cyclobutane pyrimidine dimers" | \
-#     grep -v "Crotonyllysine" | \
-#     grep -v "8-Hydroxydeoxyguanosine" | \
-#     grep -v "5-hmC" | \
-#     grep -v "5-mC" > experimentList_hg19_TFs.tab
-
 Genome=$1
-#metadata="resources/experimentList_${Genome}_TFs_only_QC_filtered.tab"
 metadata=$2
 
 mapfile -t EXPERIMENT_ID  < <(cut -f1 "$metadata")

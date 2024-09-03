@@ -38,12 +38,6 @@ Ensembl:
     hg19: hg19_ENSID_Genename_synonyms.txt
     hg38: hg38_ENSID_Genename_synonyms.txt
 
-Promoterome:
-  mm10: /bigdata/jbreda/genome/mm10/mm10_promoters_v2.gff.gz
-  mm39: /bigdata/jbreda/genome/mm39/mm39_promoters_v1.gff.gz
-  hg19: /bigdata/jbreda/genome/hg19/hg19_promoters_v2.gff.gz
-  hg38: /bigdata/jbreda/genome/hg38/hg38_promoters_v1.gff.gz
-
 TF_Complex:
   mm10: resources/complex/MusMusculus.tsv
   hg38: resources/complex/HomoSapiens.tsv
@@ -57,3 +51,13 @@ Chrom_size:
   hg38: genome/hg38/Homo_sapiens.GRCh38.dna.primary_assembly.chrom.sizes
 
 PWM_threshold: 0.5
+
+GO_list:
+  - negative_regulation_of_transcription_by_RNA_polymerase_II
+  - positive_regulation_of_transcription_by_RNA_polymerase_II
+  - regulation_of_transcription_by_RNA_polymerase_II
+  - transcription_cis-regulatory_region_binding
+
+Curated_TF_list:
+  mm10: resources/mouse_ensemble_tfs_from_lambertetal_isyes.unique.txt
+  hg38: resources/The_Human_Transcription_Factors_Cell_2018.xlsx

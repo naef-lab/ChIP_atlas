@@ -29,12 +29,44 @@
         "mem" : "60G"
     },
 
-    "make_peak_prom_tf_pos_sparse_tensor" :
+    "make_WholePeak_prom_tf_pos_sparse_tensor" :
     {
         "name" : "peak_prom_tf_pos_sparse_tensor",
         "time" : "36:00:00",
-        "cpus-per-task" : 72,
+        "cpus-per-task" : 46,
         "mem" : "200G"
+    },
+
+    "make_PeakCenter_prom_tf_pos_sparse_tensor" :
+    {
+        "name" : "peak_prom_tf_pos_sparse_tensor",
+        "time" : "36:00:00",
+        "cpus-per-task" : 46,
+        "mem" : "200G"
+    },
+
+    "get_regulatory_regions" :
+    {
+        "name" : "regulatory_regions",
+        "time" : "24:00:00",
+        "cpus-per-task" : 36,
+        "mem" : "200G"
+    },
+
+    "get_N_sf" :
+    {
+        "name" : "N_sf",
+        "time" : "24:00:00",
+        "cpus-per-task" : 46,
+        "mem" : "200G"
+    },
+
+    "get_N_sm" :
+    {
+        "name" : "N_sm",
+        "time" : "24:00:00",
+        "cpus-per-task" : 1,
+        "mem" : "6G"
     },
 
     "svd" :

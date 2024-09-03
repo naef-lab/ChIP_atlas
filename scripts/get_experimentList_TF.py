@@ -1,6 +1,7 @@
 import pandas as pd
 import argparse
 import numpy as np
+import pickle
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Make GeneID GeneName Synonyms dict.')
@@ -10,7 +11,10 @@ def parse_argument():
     parser.add_argument('--infile_tfs'
         ,required=True
         ,type=str)
-    parser.add_argument('--infile_gene_dict'
+    parser.add_argument('--geneid_genename_synonym_table'
+        ,required=True
+        ,type=str)
+    parser.add_argument('--synonym_genename_dict'
         ,required=True
         ,type=str)
     parser.add_argument('--genome'
@@ -47,7 +51,20 @@ if __name__ == '__main__':
     
     # get only TFs and others from genome
     chip = chip[ (chip.genome == args.genome) & (chip.antigen_class=='TFs and others') ]
-    
+
+    # load GeneID GeneName Synonym table gene name list
+    Gene_id_name_syn = pd.read_csv(args.geneid_genename_synonym_table,sep='\t')
+    Gene_id_name_syn.replace({np.nan:'None'},inplace=True)
+    Gene_id_name_syn.drop(Gene_id_name_syn.index[Gene_id_name_syn['Gene Synonym']=="None"],inplace=True)
+    Gene_id_name_syn.drop_duplicates(inplace=True)
+    Gene_id_name_syn.drop( Gene_id_name_syn.loc[Gene_id_name_syn['Gene Synonym'] == Gene_id_name_syn['Gene name']].index, inplace=True)
+
+    GeneName = set(Gene_id_name_syn['Gene name'])
+
+    # load synonym to gene name dictionary
+    with open(args.synonym_genename_dict, 'rb') as f:
+        Synonym_2_GeneName = pickle.load(f)
+
     # parse QC column add to chip table
     QC = pd.DataFrame([[float(n) for n in qc.split(',')] for qc in chip.QC],columns=['n_reads','f_mapped','f_duplicates','n_peaks'],index=chip.index)
     QC.iloc[:,1] /= 100
@@ -56,7 +73,6 @@ if __name__ == '__main__':
 
     # get peaks per unique mapped reads
     chip.loc[:,'n_peaks_per_unique_mapped_reads'] = chip.n_peaks/(chip.f_mapped*chip.n_reads*(1-chip.f_duplicates))
-
     n_tot = chip.shape[0]
     print(f'{args.genome}: {n_tot} experiments')
 
@@ -75,40 +91,40 @@ if __name__ == '__main__':
     print(f'{args.genome}: {chip.shape[0]/n_tot} passed QC')
 
     # get TF list
-    TFs = pd.read_csv(args.infile_tfs,sep='\t',header=None,usecols=[0,1])
-    TFs.columns = ['GeneID','GeneName']
+    with open(args.infile_tfs,'r') as f:
+        TFs = [tf.strip() for tf in f.readlines()]
 
-    # get Gene ID/name/synonyms table
-    Gene_id_name_syn = pd.read_csv(args.infile_gene_dict,sep='\t')
-    
-    # keep only Gene id that are in TFs list
-    idx_in = [Gene_id_name_syn.at[i,'Gene stable ID'] in TFs.GeneID.values for i in Gene_id_name_syn.index]
-    Gene_id_name_syn = Gene_id_name_syn.loc[idx_in,:]
-    
-    # change nans -> 'None', remove None
-    Gene_id_name_syn.replace({np.nan:'None'},inplace=True)
-    idx_out = Gene_id_name_syn['Gene Synonym']=='None'
-    Gene_id_name_syn = Gene_id_name_syn.loc[~idx_out,:]
-    
-    # remove and synonym same as name
-    idx_out = Gene_id_name_syn['Gene name'] == Gene_id_name_syn['Gene Synonym']
-    Gene_id_name_syn = Gene_id_name_syn.loc[~idx_out,:]
+    # get antigen gene names to change
+    to_rename = []
+    not_found = []
+    for g in chip.antigen.unique():
+        if g in GeneName:
+            continue
+        else:
+            if g in Synonym_2_GeneName.keys():
+                to_rename.append([g,Synonym_2_GeneName[g]])
+            else:
+                not_found.append(g)
+    to_rename = dict(zip(np.array(to_rename)[:,0],np.array(to_rename)[:,1]))
 
-    # remove duplicates
-    Gene_id_name_syn.drop_duplicates(inplace=True)
+    # change gene names
+    for g in to_rename.keys():
+        idx = chip[ chip.antigen==g ].index
+        for i in idx:
+            chip.at[i,'antigen'] = to_rename[chip.at[i,'antigen']]
 
-    # Keep only antigens that are in TF list or which have synonym in TF list
+    # Keep only antigens that are in TF list
     tf_id = []
     tf_out = []
     for id in chip.index:
         antigen = chip.at[id,'antigen']
         # if antigen is in TF list add id
-        if antigen in TFs.GeneName.values:
+        if antigen in TFs:
             tf_id.append(id)
         # if antigen is a synonym of 
         elif antigen in Gene_id_name_syn['Gene Synonym'].values:
             gene_name = Gene_id_name_syn.loc[ Gene_id_name_syn['Gene Synonym']==antigen, 'Gene name'].values
-            if any([g in TFs.GeneName.values for g in gene_name]):
+            if any([g in TFs for g in gene_name]):
                 tf_id.append(id)
         else:
             tf_out.append(antigen)
