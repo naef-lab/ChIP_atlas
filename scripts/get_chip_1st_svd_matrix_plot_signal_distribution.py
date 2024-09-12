@@ -71,15 +71,15 @@ if __name__ == '__main__':
     #    X[t,:,idx_minus_strand] = X[t,:,idx_minus_strand][:,::-1]
     
     # initilize tf x pos x prom tensor
-    X = np.zeros([N_tf,N_pos,N_prom])
+    X = np.zeros([N_tf,N_pos,N_prom],dtype=np.float32)
     for t,infile in enumerate(args.infiles_svd):
 
         if t%20==0:
             print(np.round(t/N_tf,3))
 
         with h5py.File(infile,'r') as hf:
-            u = hf['U'][:,0]
-            s = hf['S'][0]
+            u = hf['U'][:,0].astype(np.float32)
+            s = hf['S'][0].astype(np.float32)
         tmp = np.reshape(u*s,[N_prom,N_pos]).T
         # flip promoters on minus strand
         tmp[:,idx_minus_strand] = tmp[:,idx_minus_strand][:,::-1]

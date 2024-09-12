@@ -43,16 +43,17 @@ if __name__ == '__main__':
     with h5py.File(args.infile_peak,'r') as hf:
         Peaks = hf['peak_prom_pos_exp'][:]
     
-    # bin and reshape peaks
-    Peaks_binned = Peaks.reshape([N_prom,N_pos,args.bin_size,N_exp]).any(axis=2)
-    Peaks_binned = Peaks_binned.reshape([N_prom*N_pos,N_exp])
+    # bin peaks in args.bin_size bins
+    Peaks = Peaks.reshape([N_prom,N_pos,args.bin_size,N_exp]).any(axis=2)
 
+    # reshape: concatenate all promoter together
+    Peaks = Peaks.reshape([N_prom*N_pos,N_exp])
 
     # normalize as z score (w.r.t. BG) in log-space
     for i in range(N_exp):
 
         # get background: signal in non-peak & non-nan regions
-        x_bg = X[~Peaks_binned[:,i],i]
+        x_bg = X[~Peaks[:,i],i]
         x_bg = np.log( x_bg[~np.isnan(x_bg)] )
 
         # replace non-nan signal with normalized signal
@@ -66,8 +67,11 @@ if __name__ == '__main__':
     # replace nans with 0s
     # X[np.isnan(X)] = 0
 
-    idx_svd = np.where((np.isnan(X).sum(axis=1)<=(N_exp-2)))[0] # at least 2 non-nan values
-    idx_svd = np.where((Peaks_binned.sum(axis=1)>0))[0]         # at least 1 peak
+    #idx_svd = np.where((np.isnan(X).sum(axis=1)<=(N_exp-2)))[0] # at least 2 non-nan values
+    idx_svd = np.where((Peaks.sum(axis=1)>0))[0] # at least 1 peak
+
+    if len(idx_svd) == 0:
+        idx_svd = (X > X.mean(0) + 3*X.std(0)).any(1)
 
     if N_exp > 1:
         # pearson corr.

@@ -43,7 +43,6 @@ def parse_argument():
         ,type=str
         ,help="Output hfd5 file with tensor")
 
-
     return parser.parse_args()
 
 def fill_experiment(exp,promoter,N_pos):
@@ -53,9 +52,12 @@ def fill_experiment(exp,promoter,N_pos):
         with pyBigWig.open(exp) as bw:
             for p in range(N_prom):
                 [chr,start,end] = promoter.loc[p,['chr','start','end']]
-                X[p,:] = np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float)
+                if chr in bw.chroms():
+                    X[p,:] = np.array( bw.stats(chr, start, end, type="mean", nBins=N_pos) ).astype(float)
+                else:
+                    X[p,:] = -1
     except:
-        X[p,:] = -1
+        X[:] = -1
 
     return X
 
@@ -65,7 +67,7 @@ if __name__ == '__main__':
 
     # load promoters
     promoter = pd.read_csv(args.promoterome ,sep='\t')
-                           
+
     # get tensor dimention and initialize
     N_prom = promoter.shape[0]
     win_size = promoter.at[0,'end'] - promoter.at[0,'start']

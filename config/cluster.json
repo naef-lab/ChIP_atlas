@@ -73,7 +73,7 @@
     {
         "name" : "svd",
         "time" : "02:00:00",
-        "cpus-per-task" : 12,
+        "cpus-per-task" : 18,
         "mem" : "120G"
     },
 

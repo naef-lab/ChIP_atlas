@@ -6,6 +6,10 @@ import h5py
 
 def parse_argument():
     parser = argparse.ArgumentParser(description='Save ChIP Peaks for tf in tensor (N_promoters x N_positions X N_experiments).')
+    parser.add_argument('--promoterome'
+        ,required=True
+        ,type=str
+        ,help="Promoterome file")
     parser.add_argument('--tf'
         ,required=True
         ,type=str
@@ -41,32 +45,38 @@ if __name__ == '__main__':
     args = parse_argument()
 
     # load promoters
-    infile_promoter = f"/home/jbreda/Promoterome/results/{args.genome}/promoterome_pm{args.window_kb}kb_filtered.bed"
-    promoterome = pd.read_csv(infile_promoter ,sep='\t')
+    promoterome = pd.read_csv(args.promoterome ,sep='\t')
     CHR = promoterome.chr.unique()
 
     # make peaks table from bb files
     peaks_table = pd.DataFrame(columns=['exp_id','chr','start','end','score'])
+    bb_files = []
     for infile in args.infiles_tf:
-        bb = pyBigWig.open(infile)
+        try:
+            bb = pyBigWig.open(infile)
+        except:
+            print(f"Cannot open {infile}")
+            continue
+
+        bb_files.append(infile)
+
         id = infile.split('/')[-1].split('.')[0]
         for chr in CHR:
             if chr in bb.chroms():
-                p = bb.entries(chr,0,bb.chroms(chr))
-                p = pd.DataFrame(p,columns=['start','end','score'])
+                p = pd.DataFrame(bb.entries(chr,0,bb.chroms(chr)),columns=['start','end','score'])
                 p['chr'] = chr
                 p['exp_id'] = id
                 peaks_table = pd.concat([peaks_table,p],axis=0)
     peaks_table = peaks_table.reset_index(drop=True)
 
     # get tensor dimension and initialize
+    N_exp = len(bb_files)
     N_prom = promoterome.shape[0]
     N_pos = promoterome.at[0,'end'] - promoterome.at[0,'start']
-    N_exp = len(args.infiles_tf)
     # tensor of shape (N_prom,N_pos,N_exp) X[i,j,k] is True if peak k is found in promoter i at position j
     TF_peaks = np.zeros([N_prom,N_pos,N_exp],dtype=bool)
     
-    exp_ids = np.array( [exp.split('/')[-1].split('.')[0] for exp in args.infiles_tf] )
+    exp_ids = np.array( [exp.split('/')[-1].split('.')[0] for exp in bb_files] )
     x = promoterome.loc[:,['chr','start','end']].values
 
     for k, exp_id in enumerate(exp_ids):
@@ -94,4 +104,4 @@ if __name__ == '__main__':
         d.attrs['TF'] = args.tf
         d.attrs['genome'] = args.genome
         d.attrs['window_kb'] = args.window_kb
-        d.attrs['promoterome'] = infile_promoter
+        d.attrs['promoterome'] = args.promoterome
