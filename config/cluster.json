@@ -29,6 +29,14 @@
         "mem" : "60G"
     },
 
+    "make_peak_tables" :
+    {
+        "name" : "peak_tables",
+        "time" : "01:00:00",
+        "cpus-per-task" : 1,
+        "mem" : "6G"
+    },
+
     "make_WholePeak_prom_tf_pos_sparse_tensor" :
     {
         "name" : "peak_prom_tf_pos_sparse_tensor",
@@ -82,7 +90,7 @@
         "name" : "chip_1st_comp",
         "time" : "24:00:00",
         "cpus-per-task" : 1,
-        "mem" : "120G"
+        "mem" : "200G"
     },
 
     "plot_chip_1st_comp" :

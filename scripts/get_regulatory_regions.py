@@ -40,12 +40,15 @@ if __name__ == '__main__':
     prominence = {'chip':1,'atac':2}
 
     # load promoterome
-    promoterome = pd.read_csv(args.promoterome, sep='\t',header=None)
-    promoterome.columns = ['chr','start','end','strand','black_listed','gene','id']
+    promoterome = pd.read_csv(args.promoterome, sep='\t')
 
     # load atac sample names
-    atac_samples = pd.read_csv(args.atac_samples,sep=',')
-    atac_run_ids = atac_samples['Run']
+    if args.genome == 'mm10':
+        atac_samples = pd.read_csv(args.atac_samples,sep=',')
+        atac_run_ids = atac_samples['Run']
+        Tracks = ['chip','atac']
+    else:
+        Tracks = ['chip']
 
     # load chip peak sparse tensor
     Chip_peaks_prom_tf_pos = torch.load(args.chip_peak_sparse_tensor)
@@ -78,12 +81,14 @@ if __name__ == '__main__':
         signal['chip'] = moving_average(Chip_peaks_tf_pos, w)*w
 
         # get atac signal
-        X = get_atac_data(chrom.replace('chr',''),start,end,atac_run_ids.values)
-        signal['atac'] = np.max(X,axis=1)
+        if args.genome == 'mm10':
+            X = get_atac_data(chrom,start,end,atac_run_ids.values)
+            signal['atac'] = np.max(X,axis=1)
 
         # find peaks in chip and atac signals
         my_peaks = np.zeros(args.window_kb*2000).astype(bool)
-        for track in ['atac','chip']:
+
+        for track in Tracks:
             peaks[track], peak_properties[track] = find_peaks(signal[track],width=20,distance=20,prominence=prominence[track],height=0)
             for l,r in zip( np.floor(peak_properties[track]['left_ips']).astype(int), np.ceil(peak_properties[track]['right_ips']).astype(int) ):
                 my_peaks[l:r] = True

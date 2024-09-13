@@ -18,3 +18,4 @@ dependencies:
     - bedops
     - scikit-learn
     - numpyro
+    - mysql-connector-python

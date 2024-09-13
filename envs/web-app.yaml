@@ -1,0 +1,12 @@
+name: chip
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - ipython
+    - mysql-connector-python
+    - numpy
+    - pandas
+    - matplotlib
+    
