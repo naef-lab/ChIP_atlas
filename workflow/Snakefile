@@ -54,7 +54,6 @@ rule all:
         #expand('results/hg38/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #expand('results/hg38/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
         #
-        #
         #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38') ),
         #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
@@ -63,8 +62,8 @@ rule all:
         #expand('results/hg38/Peak_tables/Window_pm{window_kb}kb/{tf}.bed', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #
         #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
-        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
-        expand('results/{genome}/regulatory_regions_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
+        expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/regulatory_regions_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
         expand('results/{genome}/N_sf_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
         expand('results/{genome}/N_sm_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
         #

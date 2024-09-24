@@ -22,7 +22,12 @@ def get_N_s(TFs,chip_experiment,genome,coord):
     for f,tf in enumerate(TFs):
         n = 0
         for exp in chip_experiment[chip_experiment == tf].index:
-            bbfile = bw.open(f'resources/tracks/{genome}/{exp}.05.bb')
+            try:
+                bbfile = bw.open(f'resources/tracks/{genome}/{exp}.05.bb')
+            except:
+                print(f'Error opening {exp}.05.bb')
+                continue
+                
             if chr not in bbfile.chroms():
                 continue
             val = bbfile.entries(chr, start, end)
