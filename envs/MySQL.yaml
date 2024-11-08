@@ -1,0 +1,15 @@
+name: MySQL
+channels:
+    - conda-forge
+    - bioconda
+    - defaults
+dependencies:
+    - mysql
+    - mysql-connector-python
+    - sqlalchemy
+    - ipython
+    - numpy
+    - pandas
+    - matplotlib
+    
+    

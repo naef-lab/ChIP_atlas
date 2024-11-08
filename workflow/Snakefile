@@ -88,6 +88,8 @@ rule all:
 
 # First download data: workflow/Dowload_experiments.smk
 # Or rsync between servers
+
+# Get chrom size
 rule chrom_size:
     input:
         chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
@@ -98,6 +100,7 @@ rule chrom_size:
         python scripts/get_chrom_size.py --chip_experiment {input.chip} --genome {wildcards.genome} --outfile {output.chrom_size}
         """
 
+# Get mean chip signal across experiments for each TF, intersect with promoterome, sum across TFs.
 rule mean_chip_TF:
     input:
         chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
@@ -221,7 +224,6 @@ rule get_N_sm:
 
 
 # Chip tensor TFsvd1 x pos x prom
-
 rule make_chip_tensors:
     input:
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed",
@@ -274,7 +276,7 @@ rule make_peak_tables:
                                                   --outfile {output.table} \
                                                   --infiles_tf {input.exp_list}
         """
-
+        
 rule svd:
     input:
         chip='results/{genome}/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5',
