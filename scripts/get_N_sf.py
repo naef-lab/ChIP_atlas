@@ -11,6 +11,7 @@ def argparser():
     parser.add_argument('--genome', type=str, default='mm10', help='Genome version')
     parser.add_argument('--regulatory_regions', type=str, default="results/mm10/regulatory_regions_pm5kb.bed", help='Regulatory regions bed file')
     parser.add_argument('--chip_experiments', type=str, default="resources/experimentList_v3_mm10_TFs_only_QC_filtered.tab", help='ChIP-seq experiment table')
+    parser.add_argument('--to_ignore', type=str, help='Experiment IDs to ignore')
     parser.add_argument('--out_matrix', type=str, default='results/mm10/N_sf_pm5kb.npy', help='Output file with N_sf matrix')
     parser.add_argument('--threads', type=int, default=24, help='Number of threads')
 
@@ -50,6 +51,8 @@ if __name__ == '__main__':
     Regulatory_regions_bed = pd.read_csv(args.regulatory_regions, sep='\t')
     chip_experiment = pd.read_csv(args.chip_experiments , sep='\t',index_col=0)
     chip_experiment = chip_experiment.loc[:,'antigen']
+    to_ignore = open(args.to_ignore).read().splitlines()
+    chip_experiment.drop(to_ignore,inplace=True)
     TFs = chip_experiment.unique()
 
     # get reg. regions coordinates

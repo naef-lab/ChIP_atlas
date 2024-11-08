@@ -16,7 +16,7 @@ def parse_argument():
         ,type=str)
     parser.add_argument('--infiles_GO_terms'
         ,nargs='+'
-        ,required=True
+        ,required=False
         ,type=str)
     parser.add_argument('--genome'
         ,required=True
@@ -39,26 +39,31 @@ if __name__ == '__main__':
     with open(args.synonym_genename_dict, 'rb') as f:
         Synonym_2_GeneName = pickle.load(f)
 
-    # load GO terms
+
+    # only if GO terms are provided
     go_genes = set()
-    for f in args.infiles_GO_terms:
-        with open(f,'r') as fin:
-            for line in fin:
-                go_genes.add(line.strip())
+    if not args.infiles_GO_terms is None:
+            
+        # load GO terms
+        for f in args.infiles_GO_terms:
+            with open(f,'r') as fin:
+                for line in fin:
+                    go_genes.add(line.strip())
 
-    # correct gene names
-    to_add = set()
-    to_remove = set()
-    for g in go_genes:
-        if g in ID_2_GeneName.values():
-            continue
-        else:
-            if g in Synonym_2_GeneName.keys():
-                to_add.add(Synonym_2_GeneName[g])
+        # correct gene names
+        to_add = set()
+        to_remove = set()
+        for g in go_genes:
+            if g in ID_2_GeneName.values():
+                continue
             else:
-                to_remove.add(g)
+                if g in Synonym_2_GeneName.keys():
+                    to_add.add(Synonym_2_GeneName[g])
+                else:
+                    to_remove.add(g)
 
-    go_genes = go_genes.difference(to_remove).union(to_add)
+        go_genes = go_genes.difference(to_remove).union(to_add)
+
 
     # get curated TF list
     # mouse
