@@ -4,7 +4,7 @@ import h5py
 import argparse
 
 def parse_argument():
-    parser = argparse.ArgumentParser(description='Plot histogram of experiments QC')
+    parser = argparse.ArgumentParser(description='Compute svd of Chip signal accross experiments')
     parser.add_argument('--infile_chip'
         ,required=True
         ,type=str

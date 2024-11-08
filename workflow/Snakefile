@@ -54,7 +54,6 @@ rule all:
         #expand('results/hg38/TF_mean_chip_prom_pm{window_kb}kb/{tf}.wig', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #expand('results/hg38/Summed_TF_chip_prom_pm{window_kb}kb.bw', window_kb=config['Window_kb']),
         #
-        #
         #expand('results/mm10/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Chip_tensors/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38') ),
         #expand('results/mm10/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
@@ -62,19 +61,18 @@ rule all:
         #expand('results/mm10/Peak_tables/Window_pm{window_kb}kb/{tf}.bed', window_kb=config['Window_kb'], tf=get_tfs('mm10') ),
         #expand('results/hg38/Peak_tables/Window_pm{window_kb}kb/{tf}.bed', window_kb=config['Window_kb'], tf=get_tfs('hg38') ),
         #
-        #expand('track_hubs/{file}',file=config['Track_hub']['outfiles']),
-        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
-        expand('results/{genome}/regulatory_regions_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
-        expand('results/{genome}/N_sf_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
-        expand('results/{genome}/N_sm_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_nanmean_sparse_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_mean_sparse_tensor_prom_tf_position.pt', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/regulatory_regions_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/N_sf_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
+        #expand('results/{genome}/N_sm_pm{window_kb}kb.npy', window_kb=config['Window_kb'], genome=config['Genome']),
         #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
         #expand('results/hg38/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38')),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
         #expand('results/fig/hg38/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38')),
-        #
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
+        #expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
@@ -156,12 +154,31 @@ rule make_WholePeak_prom_tf_pos_sparse_tensor:
                                                               --threads {threads} \
         """
 
-rule make_PeakCenter_prom_tf_pos_sparse_tensor:
+rule make_PeakCenter_nanmean_prom_tf_pos_sparse_tensor:
     input:
         chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
     output:
-        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_sparse_tensor_prom_tf_position.pt'
+        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_nanmean_sparse_tensor_prom_tf_position.pt'
+    threads: 46
+    shell:
+        """
+        python scripts/make_peak_prom_tf_pos_sparse_tensor.py --chip_experiment_table {input.chip_experiment_table} \
+                                                              --infile_promoterome {input.promoterome} \
+                                                              --outfile {output.tensor} \
+                                                              --window_kb {wildcards.window_kb} \
+                                                              --genome {wildcards.genome} \
+                                                              --threads {threads} \
+                                                              --peak_center_only \
+                                                              --nanmean
+        """
+
+rule make_PeakCenter_mean_prom_tf_pos_sparse_tensor:
+    input:
+        chip_experiment_table="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
+    output:
+        tensor='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/PeakCenter_mean_sparse_tensor_prom_tf_position.pt'
     threads: 46
     shell:
         """
@@ -192,17 +209,21 @@ rule get_N_sf:
     input:
         regulatory_regions="results/{genome}/regulatory_regions_pm{window_kb}kb.bed",
         chip_experiments="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
+    params:
+        to_ignore='resources/failed_experiment_id_{genome}.txt'
     output:
         matrix='results/{genome}/N_sf_pm{window_kb}kb.npy'
-    threads: 46
+    threads: 72
     shell:
         """
         python scripts/get_N_sf.py --genome {wildcards.genome} \
                                    --regulatory_regions {input.regulatory_regions} \
                                    --chip_experiments {input.chip_experiments} \
+                                   --to_ignore {params.to_ignore} \
                                    --out_matrix {output.matrix} \
                                    --threads {threads}
         """
+
 
 rule get_N_sm:
     input:
