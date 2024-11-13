@@ -21,6 +21,10 @@ def parse_argument():
         ,required=True
         ,type=str
         ,help="hdf5 with SVD 1st comp. tensor per TF, pos, prom")
+    parser.add_argument('--outfile_tf_prom'
+        ,required=True
+        ,type=str
+        ,help="hdf5 with SVD 1st comp. tensor per TF, prom (averaged over pos)")
     #parser.add_argument('--outfig'
     #    ,required=True
     #    ,type=str
@@ -53,14 +57,18 @@ if __name__ == '__main__':
     # args
     args = parse_argument()
     
+    # get promoterome
     promoterome = pd.read_csv(args.infile_promoterome,sep='\t')
     idx_minus_strand = (promoterome.strand=='-').values
+
+    # get TFs
+    TFs = [os.path.basename(f).split('.')[0] for f in args.infiles_svd]
+    N_tf = len(args.infiles_svd)
 
     # get dims
     N_prom = promoterome.shape[0]
     with h5py.File(args.infiles_svd[0],'r') as hf:
         N_pos = hf['U'].shape[0]//N_prom
-    N_tf = len(args.infiles_svd)
     
     # run loop in parralel
     #pool = multiprocessing.Pool(args.threads)
@@ -88,8 +96,16 @@ if __name__ == '__main__':
     # save
     with h5py.File(args.outfile_tf_pos_prom,'w') as hf:
         hf.create_dataset('tf_pos_prom',data=X)
+        hf.create_dataset('tf',data=np.array(TFs,dtype='S'))
 
-    #Chip_signal = X.mean(axis=2).mean(axis=0)
+    # average over position
+    X[np.isnan(X)] = 0
+    X = X.mean(axis=1)
+
+    # save
+    with h5py.File(args.outfile_tf_prom,'w') as hf:
+        hf.create_dataset('tf_prom',data=X)
+        hf.create_dataset('tf',data=np.array(TFs,dtype='S'))
 #
     ## get Chip signal cdf
     #cdf = np.cumsum(Chip_signal)/sum(Chip_signal)
