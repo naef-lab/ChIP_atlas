@@ -6,6 +6,8 @@ def get_chip_table(genome):
     infile=f"resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
     experiment_tf = pd.read_csv(infile,sep='\t',usecols=[0,3])
     experiment_tf.columns = ['id','antigen']
+    experiment_tf.sort_values(by='antigen',inplace=True)
+    experiment_tf.reset_index(drop=True,inplace=True)
 
     return experiment_tf
 
@@ -72,7 +74,8 @@ rule all:
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
         #expand('results/fig/hg38/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38')),
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        #expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
+        expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
+        expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
@@ -320,6 +323,22 @@ rule plot_svd:
         python scripts/plot_svd_per_tf.py --infile {input.svd} --outfig {output.fig} 
         """
 
+
+rule chrom_size:
+    input:
+        genome='genome/{genome}},"genome.fa")
+    output:
+        chrom_size=os.path.join(config['outfold_genome'],Species,"chrom.sizes")
+    shell:
+        """
+        if [ ! $(hostname -s) == "upnaesrv1" ]; then
+            ml gcc/11.3.0 samtools
+        fi
+        samtools faidx {input.genome}
+        cut -f1,2 {input.genome}.fai > {output.chrom_size}
+        """
+
+
 rule make_track_hubs:
     input:
         chip=expand("resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38']),
@@ -340,13 +359,14 @@ rule get_chip_1st_comp:
         promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed"
     output:
         tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
-        #fig='results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf'
-    threads: 1
+        tensor_tf_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_prom.hdf5',
+    threads: 12
     shell:
         """
         python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_promoterome {input.promoterome} \
                                                                            --infiles_svd {input.svd_files} \
                                                                            --outfile_tf_pos_prom {output.tensor_tf_pos_prom} \
+                                                                           --outfile_tf_prom {output.tensor_tf_prom} \
                                                                            --genome {wildcards.genome} \
                                                                            --window_kb {wildcards.window_kb} \
                                                                            --threads {threads}
