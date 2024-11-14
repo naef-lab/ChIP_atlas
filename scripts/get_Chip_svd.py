@@ -67,37 +67,36 @@ if __name__ == '__main__':
     # replace nans with 0s
     # X[np.isnan(X)] = 0
 
-    #idx_svd = np.where((np.isnan(X).sum(axis=1)<=(N_exp-2)))[0] # at least 2 non-nan values
-    idx_svd = np.where((Peaks.sum(axis=1)>0))[0] # at least 1 peak
+    # Do svd in regrions with at least 1 peak  
+    idx_svd = np.where((Peaks.sum(axis=1)>0))[0]
 
+    # if no peak, use regions with high signal (3 std above mean)
     if len(idx_svd) == 0:
         idx_svd = (X > X.mean(0) + 3*X.std(0)).any(1)
 
     if N_exp > 1:
         # pearson corr.
         rho = np.corrcoef(X.T)
-        # SVD
-        U,S,Vh = np.linalg.svd(X[idx_svd,:],full_matrices=False)
 
-        # change sign such that sum(U,0) > 0
-        sign = np.sign(U.sum(axis=0,keepdims=True))
-        U = sign*U
+        # Compute SVD on peak regions only
+        U_peak,S,Vh = np.linalg.svd(X[idx_svd,:],full_matrices=False)
+
+        # change components sign such that sum(U,0) > 0
+        sign = np.sign(U_peak.sum(axis=0,keepdims=True))
+        U_peak = sign*U_peak
         Vh = sign.T*Vh
 
-        U_ = np.zeros(X.shape)*np.nan
-        U_[idx_svd,:] = U
-        U = U_
+        # Get U for all regions
+        U = X @ Vh.T @ np.diag(1/S)
     
     else:
         rho = np.ones([N_exp,N_exp])
-        U = np.zeros([N_prom*N_pos,N_exp])*np.nan
+        U = X
         S = np.ones([N_exp])
         Vh = np.ones([N_exp,N_exp])
 
-        U[idx_svd,:] = X[idx_svd,:]
-        # normalize U
-        U = U / np.linalg.norm(U,axis=0,keepdims=True)
-
+    # normalize U
+    U = U / np.linalg.norm(U,axis=0,keepdims=True)
 
 
     # save in output hdf5 file
