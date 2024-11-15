@@ -74,9 +74,11 @@ rule all:
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
         #expand('results/fig/hg38/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38')),
         #expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TF_mode_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
-        expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
-        expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
+        #expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
+        #expand('results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_prom.hdf5', window_kb=config['Window_kb'], bin_size=config['Bin_size'], genome=config['Genome']),
         #expand('results/fig/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/mean_chip_signal_per_promoter_per_tf.pdf', window_kb=config['Window_kb'], bin_size=config['Bin_size']),
+        expand('results/mm10/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/bw/{tf}.bw', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('mm10')),
+        expand('results/hg38/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/bw/{tf}.bw', window_kb=config['Window_kb'], bin_size=config['Bin_size'], tf=get_tfs('hg38')),
         #
         #expand('results/{genome}/TF_Complex.tsv',genome=['mm10','hg38'])
         #expand('results/fig/{genome}/mean_chip_signal_per_promoter_per_tf.pdf',genome=['mm10','hg38'])
@@ -91,15 +93,15 @@ rule all:
 # Or rsync between servers
 
 # Get chrom size
-rule chrom_size:
-    input:
-        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
-    output:
-        chrom_size='resources/{genome}_chrom_size.txt'
-    shell:
-        """
-        python scripts/get_chrom_size.py --chip_experiment {input.chip} --genome {wildcards.genome} --outfile {output.chrom_size}
-        """
+#rule chrom_size:
+#    input:
+#        chip="resources/experimentList_v3_{genome}_TFs_only_QC_filtered.tab"
+#    output:
+#        chrom_size='resources/{genome}_chrom_size.txt'
+#    shell:
+#        """
+#        python scripts/get_chrom_size.py --chip_experiment {input.chip} --genome {wildcards.genome} --outfile {output.chrom_size}
+#        """
 
 # Get mean chip signal across experiments for each TF, intersect with promoterome, sum across TFs.
 rule mean_chip_TF:
@@ -124,19 +126,19 @@ rule intersect_mean_chip_TF_with_promoter:
         wiggletools overlaps {input.promoterome} {input.wig} > {output.wig_promoterome}
         """
 
-rule sum_TF_chip:
-    input:
-        tf_wigs_promoterome=get_tf_mean_wig_promoter,
-        chrom_size='resources/{genome}_chrom_size.txt'
-    output:
-        sum_bw='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.bw'
-    params:
-        sum_wig='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.wig'
-    shell:
-        """
-        wiggletools sum {input.tf_wigs_promoterome} > {params.sum_wig}
-        wigToBigWig {params.sum_wig} {input.chrom_size} {output.sum_bw}
-        """
+#rule sum_TF_chip:
+#    input:
+#        tf_wigs_promoterome=get_tf_mean_wig_promoter,
+#        chrom_size='resources/{genome}_chrom_size.txt'
+#    output:
+#        sum_bw='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.bw'
+#    params:
+#        sum_wig='results/{genome}/Summed_TF_chip_prom_pm{window_kb}kb.wig'
+#    shell:
+#        """
+#        wiggletools sum {input.tf_wigs_promoterome} > {params.sum_wig}
+#        wigToBigWig {params.sum_wig} {input.chrom_size} {output.sum_bw}
+#        """
 
 # get regulatory regions
 
@@ -227,7 +229,6 @@ rule get_N_sf:
                                    --threads {threads}
         """
 
-
 rule get_N_sm:
     input:
         regulatory_regions="results/{genome}/regulatory_regions_pm{window_kb}kb.bed",
@@ -307,7 +308,7 @@ rule svd:
         peak='results/{genome}/Peak_tensors/Window_pm{window_kb}kb/{tf}.hdf5'
     output:
         svd='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5'
-    threads: 12
+    threads: 24
     shell:
         """
         python scripts/get_Chip_svd.py --infile_chip {input.chip} --infile_peak {input.peak} --outfile {output.svd} --window_kb {wildcards.window_kb} --bin_size {wildcards.bin_size}
@@ -323,21 +324,36 @@ rule plot_svd:
         python scripts/plot_svd_per_tf.py --infile {input.svd} --outfig {output.fig} 
         """
 
-
 rule chrom_size:
-    input:
-        genome='genome/{genome}},"genome.fa")
+    params:
+        genome_fasta = lambda wildcards: config['Genome_fasta'][wildcards.genome]
     output:
-        chrom_size=os.path.join(config['outfold_genome'],Species,"chrom.sizes")
+        chrom_size = "resources/{genome}.chrom.sizes"
     shell:
         """
         if [ ! $(hostname -s) == "upnaesrv1" ]; then
             ml gcc/11.3.0 samtools
         fi
-        samtools faidx {input.genome}
-        cut -f1,2 {input.genome}.fai > {output.chrom_size}
+        samtools faidx {params.genome_fasta}
+        cut -f1,2 {params.genome_fasta}.fai > {output.chrom_size}
         """
 
+rule make_svd_bigwig:
+    input:
+        svd = "results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/{tf}.hdf5",
+        chrom_size = "resources/{genome}.chrom.sizes"
+    params:
+        promoterome="/home/jbreda/Promoterome/results/{genome}/promoterome_pm{window_kb}kb_filtered_clustered_sorted.bed",
+    output:
+        bw='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/bw/{tf}.bw'
+    shell:
+        """
+        python scripts/get_chip_1st_svd_bigwig.py --infile_svd {input.svd} \
+                                                  --promoterome {params.promoterome} \
+                                                  --chrom_size {input.chrom_size} \
+                                                  --bin_size {wildcards.bin_size} \
+                                                  --outfile {output.bw}
+        """
 
 rule make_track_hubs:
     input:
@@ -351,8 +367,7 @@ rule make_track_hubs:
         python scripts/make_track_hubs.py
         """
 
-# rule Chip 1st comp. matrix:
-# TODO: make plot in a separate rule
+# rule Chip 1st comp. tensors: TFsvd1 x pos x prom and TFsvd1 x prom (mean across pos)
 rule get_chip_1st_comp:
     input:
         svd_files=get_all_svd_files, # all svd files for dependence
@@ -360,10 +375,10 @@ rule get_chip_1st_comp:
     output:
         tensor_tf_pos_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_pos_prom.hdf5',
         tensor_tf_prom='results/{genome}/svd/Window_pm{window_kb}kb_bin_size_{bin_size}/tensor_TFsvd1_prom.hdf5',
-    threads: 12
+    threads: 32
     shell:
         """
-        python scripts/get_chip_1st_svd_matrix_plot_signal_distribution.py --infile_promoterome {input.promoterome} \
+        python scripts/get_chip_1st_svd_matrix.py --infile_promoterome {input.promoterome} \
                                                                            --infiles_svd {input.svd_files} \
                                                                            --outfile_tf_pos_prom {output.tensor_tf_pos_prom} \
                                                                            --outfile_tf_prom {output.tensor_tf_prom} \

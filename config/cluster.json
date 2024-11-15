@@ -89,16 +89,16 @@
     {
         "name" : "svd",
         "time" : "02:00:00",
-        "cpus-per-task" : 12,
-        "mem" : "120G"
+        "cpus-per-task" : 24,
+        "mem" : "150G"
     },
 
     "get_chip_1st_comp" :
     {
         "name" : "chip_1st_comp",
         "time" : "24:00:00",
-        "cpus-per-task" : 12,
-        "mem" : "200G"
+        "cpus-per-task" : 36,
+        "mem" : "230G"
     },
 
     "plot_chip_1st_comp" :
