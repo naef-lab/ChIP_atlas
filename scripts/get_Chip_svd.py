@@ -95,10 +95,6 @@ if __name__ == '__main__':
         S = np.ones([N_exp])
         Vh = np.ones([N_exp,N_exp])
 
-    # normalize U
-    U = U / np.linalg.norm(U,axis=0,keepdims=True)
-
-
     # save in output hdf5 file
     with h5py.File(args.outfile,'w') as hf:
         hf.create_dataset('rho',data=rho)

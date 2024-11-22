@@ -84,7 +84,7 @@ if __name__ == '__main__':
     to_keep = np.nanmean(np.nanmean(X,axis=0),axis=0) > 0
     X = X[:,:,to_keep]
     
-    # get experiment IDs    
+    # get experiment IDs
     IDs = np.array( [exp.split('/')[3].split('.')[0] for exp in args.infiles_tf] )
     exp_id = [str(e) for e in IDs[to_keep]]
     failed_bw = [str(e) for e in IDs[~to_keep]]
