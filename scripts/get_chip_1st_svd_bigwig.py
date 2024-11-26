@@ -66,6 +66,10 @@ if __name__ == '__main__':
         if np.all(np.isnan( chip[:,p] )):
             continue
 
+        # skip if all zero
+        if np.all( chip[:,p] == 0 ):
+            continue
+
         # get absolute and relative idx
         chr = promoterome.at[p,'chr']
         start_idx = int(np.ceil(promoterome.at[p,'start']/args.bin_size))
@@ -88,6 +92,10 @@ if __name__ == '__main__':
             
             # get indices with non zero values
             idx = np.where( chr_values[chr] != 0 )[0]
+
+            # skip if no values
+            if len(idx) == 0:
+                continue
 
             # get coordinates and values
             chrs = idx.shape[0]*[chr]
