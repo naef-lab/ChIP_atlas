@@ -19,3 +19,4 @@ dependencies:
     - scikit-learn
     - numpyro
     - mysql-connector-python
+    - openpyxl

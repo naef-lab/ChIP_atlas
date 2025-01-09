@@ -12,11 +12,11 @@ rule all:
     input:
         #expand("genome/{genome}/GeneName_Synonyms_dict.{ext}",genome=config['Genome'],ext=['txt','pkl']),
         expand("resources/{genome}/TF_list.txt",genome=config['Genome']),
-        expand("resources/{genome}/TF_list_no_go_terms.txt",genome=config['Genome']),
+        #expand("resources/{genome}/TF_list_no_go_terms.txt",genome=config['Genome']),
         #expand("results/fig/hist_antigen_class_per_genome_{version}.pdf",version=['v2','v3']),
         #expand("results/fig/hist_experiment_QC_{version}.pdf",version=['v2','v3']),
         #expand("results/fig/hist_peaks_per_unique_mapped_read_{version}.pdf",version=['v2','v3']),
-        #expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=['v2']),
+        expand("resources/experimentList_{version}_{genome}_TFs_only_QC_filtered.tab",genome=['mm10','hg38'],version=config['Version']),
         #expand("log/download_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v3']),
         #expand("resources/to_redowload_{version}_{genome}.txt",genome=['mm10','hg38'],version=['v3']),
         #expand("log/redownload_error_chip_data_{version}_{genome}.log",genome=['mm10','hg38'],version=['v3'])
@@ -89,7 +89,7 @@ rule plot_chip_experiments_stats_QC:
 rule get_ChIP_experiments_TF_QC_filtered:
     input:
         chip="resources/experimentList_{version}.tab",
-        tfs="resources/{genome}/TF_list_{version}.txt",
+        tfs="resources/{genome}/TF_list.txt",
         geneid_genename_synonym="genome/{genome}/{genome}_ENSID_Genename_synonyms.txt.gz",
         synonym_genename="genome/{genome}/GeneName_Synonyms_dict.pkl",
     output:
