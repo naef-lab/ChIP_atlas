@@ -43,29 +43,28 @@ if __name__ == '__main__':
     with h5py.File(args.infile_peak,'r') as hf:
         Peaks = hf['peak_prom_pos_exp'][:]
     
-    # bin peaks in args.bin_size bins
+    # bin peaks in args.bin_size bins and concatenate all promoter together
     Peaks = Peaks.reshape([N_prom,N_pos,args.bin_size,N_exp]).any(axis=2)
-
-    # reshape: concatenate all promoter together
     Peaks = Peaks.reshape([N_prom*N_pos,N_exp])
 
     # normalize as z score (w.r.t. BG) in log-space
-    for i in range(N_exp):
-
-        # get background: signal in non-peak & non-nan regions
-        x_bg = X[~Peaks[:,i],i]
-        x_bg = np.log( x_bg[~np.isnan(x_bg)] )
-
-        # replace non-nan signal with normalized signal
-        idx_data = ~np.isnan(X[:,i])
-        idx_nan = ~idx_data
-        X[idx_data,i] = (np.log(X[idx_data,i]) - np.mean(x_bg)) / np.std(x_bg)
-        X[idx_nan,i] = np.mean(X[idx_data,i])
+    #for i in range(N_exp):
+    #
+    #    # get background: signal in non-peak & non-nan regions
+    #    x_bg = X[~Peaks[:,i],i]
+    #    x_bg = np.log( x_bg[~np.isnan(x_bg)] )
+    #
+    #    # replace non-nan signal with normalized signal
+    #    idx_data = ~np.isnan(X[:,i])
+    #    idx_nan = ~idx_data
+    #    X[idx_data,i] = (np.log(X[idx_data,i]) - np.mean(x_bg)) / np.std(x_bg)
+    #    X[idx_nan,i] = np.mean(X[idx_data,i])
 
     # Normalize by size factor
     # X = ( X / np.nansum(X,axis=0,keepdims=True).sum(axis=1,keepdims=True) ) * args.size_factor
+
     # replace nans with 0s
-    # X[np.isnan(X)] = 0
+    X[np.isnan(X)] = 0
 
     # Do svd in regrions with at least 1 peak  
     idx_svd = np.where((Peaks.sum(axis=1)>0))[0]
